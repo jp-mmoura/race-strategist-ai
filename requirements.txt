@@ -1,0 +1,5 @@
+fastf1==3.8.3
+openmeteo-requests==1.7.5
+requests-cache==1.3.2
+retry-requests==2.0.0
+chainlit==2.11.1
