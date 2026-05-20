@@ -1,5 +1,29 @@
-fastf1==3.8.3
-openmeteo-requests==1.7.5
-requests-cache==1.3.2
-retry-requests==2.0.0
-chainlit==2.11.1
+# ============================================
+# F1 Race Strategist AI - Dependencies
+# ============================================
+
+# LLM & Agent Framework
+langchain>=0.3.0
+langchain-openai>=0.3.0
+langchain-community>=0.3.0
+langgraph>=0.4.0
+
+# F1 Data
+fastf1>=3.8.0
+
+# Vector Store (RAG)
+chromadb>=1.0.0
+
+# UI
+streamlit>=1.45.0
+
+# Data Processing
+pandas>=2.2.0
+
+# Weather API
+openmeteo-requests>=1.7.0
+requests-cache>=1.3.0
+retry-requests>=2.0.0
+
+# Environment
+python-dotenv>=1.1.0

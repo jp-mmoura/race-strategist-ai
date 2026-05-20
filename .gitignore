@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Data & Cache
+data/chroma_db/
+data/fastf1_cache/
+data/f1_cache/
+data/weather_cache/
+notebooks/data/
+*.sqlite
+*.sqlite3
+*.ff1pkl
+
+# Notebook outputs
+notebooks/*_executed.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gemini
+.gemini/
