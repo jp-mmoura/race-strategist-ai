@@ -207,4 +207,3 @@ MIT
 
 ---
 
-Built with ❤️ and data by [@jp-mmoura](https://github.com/jp-mmoura)
