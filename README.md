@@ -39,12 +39,16 @@ f1-raceStrategistAI/
 │   ├── embedder.py         # ChromaDB client & collection access
 │   └── retriever.py        # Semantic search + FastF1 enrichment
 ├── agents/                 # LangGraph agent nodes
+│   ├── tire_agent.py       # Tire wear, degradation & pit-window analysis
 │   ├── strategist_agent.py # Strategy generation
 │   ├── evaluator_agent.py  # Strategy evaluation
-│   ├── tire_agent.py       # Tire analysis
 │   └── weather_agent.py    # Weather impact assessment
 ├── data/
-│   └── raw/                # Source data (circuits.csv, FIA regulations)
+│   └── raw/                # Source data
+│       ├── circuits.csv        # 77 F1 circuits
+│       ├── track_features.csv  # Track characteristics (tire stress, grip, etc.)
+│       ├── track_history.csv   # Historical track data with temperatures
+│       └── *.pdf               # FIA 2026 regulations
 ├── notebooks/
 │   └── rag_testing.ipynb   # RAG pipeline validation
 ├── tests/                  # Test suite
@@ -97,7 +101,7 @@ python -m rag.ingestor
 
 ### 4. Validate Setup
 
-Test that FastF1 and the RAG pipeline work:
+Test that FastF1, RAG, and agents work:
 
 ```bash
 # Test FastF1 data fetching
@@ -105,6 +109,9 @@ python tools/fastf1_tool.py
 
 # Test RAG retrieval
 python -m rag.retriever
+
+# Test Tire Agent
+python -m agents.tire_agent
 ```
 
 ## Key Features
@@ -137,6 +144,37 @@ ctx = retrieve_race_context(
 )
 print(ctx["context_text"])
 # → Winner: SAI (Ferrari), Strategy: MEDIUM → HARD → SOFT, Rainfall: Yes
+```
+
+### 🏁 Tire Agent (`agents/tire_agent.py`)
+
+Combines static track data (CSVs) with live FastF1 session data to produce strategy recommendations:
+
+| Function | Description |
+|---|---|
+| `classify_track_tire_wear(circuit)` | Classifies wear level (High/Medium/Low) using weighted scoring on tire stress, lateral load, asphalt abrasion & grip |
+| `calculate_tire_degradation(session, driver)` | Per-stint degradation rate (sec/lap) via linear regression on lap times |
+| `estimate_pit_window(session, driver)` | Optimal pit-stop lap range using a crossover model (deg loss vs pit time loss) |
+| `analyze_tire_strategy(circuit, year)` | Full analysis combining all above + compound recommendation + weather impact |
+
+**Track wear classification examples:**
+
+| Circuit | Classification | Score |
+|---|---|---|
+| Monaco | 🟢 Low Tire Wear | 1.00 |
+| Singapore | 🟡 Medium Tire Wear | 2.05 |
+| Monza | 🟡 Medium Tire Wear | 3.40 |
+| Bahrain | 🔴 High Tire Wear | 3.55 |
+| Spa | 🔴 High Tire Wear | 4.20 |
+| Silverstone | 🔴 High Tire Wear | 4.45 |
+
+```python
+from agents.tire_agent import analyze_tire_strategy
+
+analysis = analyze_tire_strategy("Silverstone", 2022)
+print(analysis["track_wear"]["classification"])  # → "High Tire Wear"
+print(analysis["compound_rec"]["recommended_order"])  # → ["MEDIUM", "MEDIUM", "HARD", "SOFT"]
+print(analysis["pit_window"]["strategy_type"])  # → "2-stop"
 ```
 
 ### 📊 Shared State (`graph/state.py`)
