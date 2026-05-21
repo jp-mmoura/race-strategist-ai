@@ -5,24 +5,33 @@ An AI-powered Formula 1 race strategy assistant built with **LangGraph**, **Fast
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Streamlit UI                      │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│               LangGraph Workflow                    │
-│  ┌───────────┐  ┌────────────┐  ┌───────────────┐  │
-│  │ Data Node │→ │ Strategy   │→ │  Evaluation   │  │
-│  │ (FastF1)  │  │   Agent    │  │    Agent      │  │
-│  └───────────┘  └────────────┘  └───────────────┘  │
-└──────────────────────┬──────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        ▼              ▼              ▼
-   ┌─────────┐   ┌──────────┐   ┌─────────┐
-   │ FastF1  │   │ ChromaDB │   │ Weather │
-   │  Tool   │   │   RAG    │   │  Tool   │
-   └─────────┘   └──────────┘   └─────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                       Streamlit UI                          │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                    LangGraph Workflow                        │
+│                                                             │
+│  ┌────────────┐  ┌─────────────┐                            │
+│  │Tire Agent  │  │Weather Agent│                            │
+│  │(degradation│  │(Open-Meteo  │                            │
+│  │ pit window)│  │ rain/temp)  │                            │
+│  └─────┬──────┘  └──────┬──────┘                            │
+│        │                │                                   │
+│        └───────┬────────┘                                   │
+│                ▼                                            │
+│  ┌─────────────────────┐     ┌──────────────────────────┐   │
+│  │  Strategy Agent     │ ──▶ │   Evaluator Agent        │   │
+│  │  (LLM + rule-based) │     │   (coherence scoring)    │   │
+│  └─────────────────────┘     └──────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          ▼                  ▼                  ▼
+     ┌─────────┐       ┌──────────┐       ┌─────────┐
+     │ FastF1  │       │ ChromaDB │       │ Weather │
+     │  Tool   │       │   RAG    │       │  Tool   │
+     └─────────┘       └──────────┘       └─────────┘
 ```
 
 ## Project Structure
@@ -112,6 +121,15 @@ python -m rag.retriever
 
 # Test Tire Agent
 python -m agents.tire_agent
+
+# Test Weather Agent
+python -m agents.weather_agent
+
+# Test Strategy Agent (offline / rule-based — no API key needed)
+python -m agents.strategist_agent
+
+# Test Evaluator Agent (full pipeline)
+python -m agents.evaluator_agent
 ```
 
 ## Key Features
@@ -177,6 +195,74 @@ print(analysis["compound_rec"]["recommended_order"])  # → ["MEDIUM", "MEDIUM",
 print(analysis["pit_window"]["strategy_type"])  # → "2-stop"
 ```
 
+### 🌦️ Weather Agent (`agents/weather_agent.py`)
+
+Integrates the Open-Meteo API (via `tools/weather_tool.py`) to provide real-time and forecast weather data for any F1 circuit:
+
+| Function | Description |
+|---|---|
+| `get_race_forecast(circuit, race_date)` | Hourly forecast filtered to the race-day window (12:00–18:00 UTC) |
+| `assess_rain_risk(circuit, race_date)` | Classifies precipitation risk (High/Medium/Low/None) with wet windows |
+| `analyze_weather_impact(circuit, race_date, year)` | Full analysis: current conditions, forecast, rain risk, temperature/wind, strategic notes |
+| `compare_historical_weather(circuit, year)` | Compares forecast vs historical session weather from FastF1 |
+
+```python
+from agents.weather_agent import analyze_weather_impact
+
+impact = analyze_weather_impact("Monaco")
+print(impact["rain_risk"]["risk_level"])       # → "None"
+print(impact["temperature"]["air_temp_avg_c"]) # → 22.2
+print(impact["strategy_notes"][0])             # → "☀️ DRY CONDITIONS — ..."
+```
+
+### 🧠 Strategy Agent (`agents/strategist_agent.py`)
+
+Consumes outputs from Tire Agent + Weather Agent + RAG to generate a unified strategy recommendation:
+
+| Function | Description |
+|---|---|
+| `build_strategy_context(circuit, year, ...)` | Gathers all upstream data into a single context dict |
+| `generate_strategy(circuit, year, ...)` | LLM-powered recommendation via LangChain/OpenAI (with offline fallback) |
+| `generate_strategy_offline(circuit, year, ...)` | Rule-based fallback — no LLM needed |
+| `run_strategy_node(state)` | LangGraph node entry-point |
+
+Output includes: strategy type, compound order, target pit laps, full recommendation text with justification, and confidence level.
+
+```python
+from agents.strategist_agent import generate_strategy_offline
+
+strategy = generate_strategy_offline("Silverstone", 2023)
+print(strategy["strategy_type"])  # → "1-stop"
+print(strategy["compounds"])     # → ["MEDIUM", "SOFT"]
+print(strategy["pit_laps"])      # → [52]
+print(strategy["confidence"])    # → "medium"
+```
+
+### ✅ Evaluator Agent (`agents/evaluator_agent.py`)
+
+Verifies the coherence of a strategy recommendation through 8 rule-based checks:
+
+| Rule | What it checks | Severity |
+|---|---|---|
+| `SOFT_HIGH_WEAR` | SOFT compound on high tire-wear circuit | critical / minor |
+| `DRY_UNDER_RAIN` | All-dry compounds under high/medium rain risk | critical / major |
+| `PIT_WINDOW_MISS` | Pit laps outside the computed optimal window | major |
+| `DEG_VS_STOPS` | Strategy type vs degradation rate mismatch | major / minor |
+| `SOFT_START` | Starting on SOFT at high/medium-wear circuit | major |
+| `TEMP_COMPOUND` | Compound choice vs extreme temperatures | major |
+| `STINT_COVERAGE` | Planned stints covering race distance | minor |
+| `WET_NO_RAIN` | Wet/intermediate tyres without rain forecast | major |
+
+Produces a coherence score (0–100) with verdicts: ✅ Approved (≥75), ⚠️ Review (≥45), ❌ Rejected (<45).
+
+```python
+from agents.evaluator_agent import evaluate_full_pipeline
+
+result = evaluate_full_pipeline("Silverstone", 2023)
+print(result["evaluation"]["score"])    # → 90
+print(result["evaluation"]["verdict"])  # → "✅ Approved"
+```
+
 ### 📊 Shared State (`graph/state.py`)
 
 `RaceStrategyState` TypedDict flows through LangGraph:
@@ -188,6 +274,8 @@ print(analysis["pit_window"]["strategy_type"])  # → "2-stop"
 | `lap_data` | `DataFrame` | Session laps |
 | `tire_data` | `DataFrame` | Compound & stint info |
 | `weather_data` | `DataFrame` | Weather readings |
+| `tire_analysis` | `dict` | Tire agent output |
+| `weather_analysis` | `dict` | Weather agent output |
 | `strategy_recommendation` | `dict` | Strategy agent output |
 | `evaluation_result` | `dict` | Evaluation agent output |
 

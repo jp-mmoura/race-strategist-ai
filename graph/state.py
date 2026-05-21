@@ -58,6 +58,8 @@ class RaceStrategyState(TypedDict, total=False):
     weather_data: pd.DataFrame | None
 
     # ── Agent outputs ─────────────────────────────────────────────
+    tire_analysis: dict[str, Any] | None
+    weather_analysis: dict[str, Any] | None
     strategy_recommendation: dict[str, Any] | None
     evaluation_result: dict[str, Any] | None
 
