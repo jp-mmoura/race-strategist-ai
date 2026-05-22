@@ -54,8 +54,25 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # LLM configuration
 # ---------------------------------------------------------------------------
-_LLM_MODEL = os.getenv("STRATEGY_LLM_MODEL", "gpt-4o-mini")
+_LLM_PROVIDER = os.getenv("STRATEGY_LLM_PROVIDER", "google")  # "google" or "openai"
+_LLM_MODEL = os.getenv("STRATEGY_LLM_MODEL", "gemini-2.0-flash")
 _LLM_TEMPERATURE = float(os.getenv("STRATEGY_LLM_TEMPERATURE", "0.3"))
+
+
+def _get_llm():
+    """Instantiate the configured LLM (Google Gemini or OpenAI)."""
+    if _LLM_PROVIDER == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(
+            model=_LLM_MODEL,
+            temperature=_LLM_TEMPERATURE,
+        )
+    else:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=_LLM_MODEL,
+            temperature=_LLM_TEMPERATURE,
+        )
 
 
 # ===================================================================
@@ -334,10 +351,9 @@ def generate_strategy(
 
     # ── 2. Call LLM ───────────────────────────────────────────────
     try:
-        from langchain_openai import ChatOpenAI
         from langchain_core.messages import SystemMessage, HumanMessage
 
-        llm = ChatOpenAI(model=_LLM_MODEL, temperature=_LLM_TEMPERATURE)
+        llm = _get_llm()
 
         user_prompt = (
             f"Generate a race strategy recommendation for the "

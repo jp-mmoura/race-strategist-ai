@@ -279,19 +279,42 @@ print(result["evaluation"]["verdict"])  # → "✅ Approved"
 | `strategy_recommendation` | `dict` | Strategy agent output |
 | `evaluation_result` | `dict` | Evaluation agent output |
 
-## Development
+## Development & Running the App
+
+### 📊 Streamlit UI Control Panel
+
+To start the telemetry-inspired multi-page dashboard:
 
 ```bash
-# Run tests
-pytest tests/
+streamlit run app/Home.py
+```
 
-# Run Streamlit UI (coming soon)
-streamlit run app.py
+Features available in the UI:
+- **01. Strategy Hub**: Chat with the LangGraph orchestrator, model live race incidents (Safety Car, weather, laps remaining), and view a Pirelli stint-colored strategy timeline.
+- **02. Tire Analysis**: Inspect live tire wear charts, stint telemetry data, regression decay rates, and track wear classification.
+- **03. Race History**: Fetch past GP official classifications, look up winner strategy reference cards, and compare strategy options via interactive Plotly charts.
+
+### 🧬 LangGraph Workflow Execution
+
+You can run the full multi-agent workflow from Python or CLI:
+
+```bash
+# Run CLI test
+python3 -m agents.supervisor
+```
+
+Or invoke the compiled graph directly in Python:
+
+```python
+from agents.supervisor import run_graph
+
+result = run_graph("Silverstone 2023 race strategy")
+print("Verdict:", result["evaluation_result"]["verdict"])
+print("Score:", result["evaluation_result"]["score"])
 ```
 
 ## License
 
 MIT
 
----
 

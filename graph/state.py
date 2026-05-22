@@ -63,6 +63,13 @@ class RaceStrategyState(TypedDict, total=False):
     strategy_recommendation: dict[str, Any] | None
     evaluation_result: dict[str, Any] | None
 
+    # ── RAG context ─────────────────────────────────────────────
+    rag_context: dict[str, Any] | None
+
+    # ── Reflection / revision loop ────────────────────────────────
+    revision_count: int
+    revision_feedback: str | None
+
     # ── Conversation & error handling ─────────────────────────────
     messages: list[dict[str, str]]
     error: str | None
