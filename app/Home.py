@@ -5,6 +5,7 @@ Main landing page of the application, rendering the F1 telemetry styling,
 features highlight, architecture, and quick access.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 import streamlit as st
+from dotenv import load_dotenv
 from app.styles.theme import inject_css, RED_ACCENT
 
 # ── Page config ───────────────────────────────────────────────────
@@ -23,6 +25,7 @@ st.set_page_config(
     layout="wide",
 )
 inject_css()
+load_dotenv()
 
 # ── Hero Banner ───────────────────────────────────────────────────
 st.markdown(
@@ -114,7 +117,47 @@ with right_col:
     )
     
     st.markdown("---")
-    st.markdown("### 📡 Live Telemetry Status")
-    st.success("📡 FastF1 API cache: Connected")
-    st.success("🧠 LLM provider: Connected (Gemini 2.0)")
-    st.info("📚 RAG Chromadb: Ready")
+    st.markdown("### 📡 System Status")
+
+    _root = Path(_PROJECT_ROOT)
+
+    # — LLM provider ——————————————————————————————————————————————
+    _provider = os.getenv("STRATEGY_LLM_PROVIDER", "google").strip().lower()
+    if _provider not in ("google", "openai"):
+        st.error(
+            f"🧠 LLM: `STRATEGY_LLM_PROVIDER={_provider!r}` is invalid — "
+            "valid values: `'google'` or `'openai'`."
+        )
+    elif _provider == "google":
+        if os.getenv("GOOGLE_GENAI_API_KEY", "").strip():
+            st.success("🧠 LLM: Google Gemini — `GOOGLE_GENAI_API_KEY` configured")
+        else:
+            st.warning("🧠 LLM: Google Gemini — `GOOGLE_GENAI_API_KEY` not set")
+    else:
+        if os.getenv("OPENAI_API_KEY", "").strip():
+            st.success("🧠 LLM: OpenAI — `OPENAI_API_KEY` configured")
+        else:
+            st.warning("🧠 LLM: OpenAI — `OPENAI_API_KEY` not set")
+
+    # — FastF1 cache ——————————————————————————————————————————————
+    _f1_raw = os.getenv("FASTF1_CACHE_DIR", "data/fastf1_cache")
+    _f1_cache = Path(_f1_raw) if Path(_f1_raw).is_absolute() else _root / _f1_raw
+    if not _f1_cache.exists():
+        st.warning(f"📡 FastF1 cache: not found — will be created on first use (`{_f1_cache}`)")
+    elif not os.access(_f1_cache, os.W_OK):
+        st.error(f"📡 FastF1 cache: no write permission (`{_f1_cache}`)")
+    else:
+        st.success(f"📡 FastF1 cache: ready (`{_f1_cache}`)")
+
+    # — ChromaDB ——————————————————————————————————————————————————
+    _chroma_raw = os.getenv("CHROMA_PERSIST_DIRECTORY", "data/chroma_db")
+    _chroma = Path(_chroma_raw) if Path(_chroma_raw).is_absolute() else _root / _chroma_raw
+    _chroma_db = _chroma / "chroma.sqlite3"
+    if not _chroma.exists():
+        st.warning(f"📚 ChromaDB: directory not found — run `python -m rag.ingestor` (`{_chroma}`)")
+    elif not _chroma_db.exists():
+        st.warning(f"📚 ChromaDB: not populated — run `python -m rag.ingestor` (`{_chroma}`)")
+    elif not os.access(_chroma_db, os.R_OK):
+        st.error(f"📚 ChromaDB: no read permission (`{_chroma_db}`)")
+    else:
+        st.success(f"📚 ChromaDB: vector store ready (`{_chroma}`)")
