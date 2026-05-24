@@ -14,19 +14,20 @@ Main functions
 build_strategy_context(circuit, year, race_date, driver)
     → gathers all upstream data into a single context dict
 
+generate_strategy_from_context(tire_analysis, weather_analysis, rag_context, ...)
+    → primary LLM entry point used by strategy_node and revision_node;
+      accepts pre-computed state data to avoid duplicate API calls (Bug B fix)
+
 generate_strategy(circuit, year, race_date, driver)
-    → LLM-powered strategic recommendation (uses OpenAI via LangChain)
+    → standalone LLM recommendation (fetches its own context via
+      build_strategy_context; use generate_strategy_from_context inside the graph)
 
 generate_strategy_offline(circuit, year, race_date, driver)
     → rule-based fallback (no LLM required)
-
-run_strategy_node(state)
-    → LangGraph node entry-point — reads/writes RaceStrategyState
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import textwrap
@@ -35,14 +36,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from agents.tire_agent import (
-    analyze_tire_strategy,
-    classify_track_tire_wear,
-)
-from agents.weather_agent import (
-    analyze_weather_impact,
-    assess_rain_risk,
-)
+from agents.tire_agent import analyze_tire_strategy
+from agents.weather_agent import analyze_weather_impact
 from rag.retriever import retrieve_race_context
 
 # ---------------------------------------------------------------------------
@@ -58,21 +53,27 @@ _LLM_PROVIDER = os.getenv("STRATEGY_LLM_PROVIDER", "google")  # "google" or "ope
 _LLM_MODEL = os.getenv("STRATEGY_LLM_MODEL", "gemini-2.0-flash")
 _LLM_TEMPERATURE = float(os.getenv("STRATEGY_LLM_TEMPERATURE", "0.3"))
 
+_VALID_PROVIDERS = ("google", "openai")
+
 
 def _get_llm():
     """Instantiate the configured LLM (Google Gemini or OpenAI)."""
+    if _LLM_PROVIDER not in _VALID_PROVIDERS:
+        raise ValueError(
+            f"Unsupported STRATEGY_LLM_PROVIDER={_LLM_PROVIDER!r}. "
+            f"Valid options: {_VALID_PROVIDERS}."
+        )
     if _LLM_PROVIDER == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=_LLM_MODEL,
             temperature=_LLM_TEMPERATURE,
         )
-    else:
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
-            model=_LLM_MODEL,
-            temperature=_LLM_TEMPERATURE,
-        )
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        model=_LLM_MODEL,
+        temperature=_LLM_TEMPERATURE,
+    )
 
 
 # ===================================================================
@@ -395,29 +396,21 @@ def generate_strategy(
 
 
 # ===================================================================
-# 3. generate_strategy_offline — rule-based fallback
+# 3. _build_offline_from_ctx — shared rule-based text builder
 # ===================================================================
 
-def generate_strategy_offline(
+def _build_offline_from_ctx(
+    ctx: dict[str, Any],
     circuit: str,
     year: int,
-    race_date: str | date | None = None,
     driver: str | None = None,
-    session_type: str = "R",
 ) -> dict[str, Any]:
-    """Generate a strategy recommendation without an LLM.
+    """Build a rule-based strategy result from a pre-assembled context dict.
 
-    Uses deterministic rules based on the tire and weather data.
-    Useful as a fallback when no API key is configured.
-
-    Returns
-    -------
-    dict with the same keys as ``generate_strategy``.
+    Contains all offline recommendation logic. Shared by
+    ``generate_strategy_offline`` and the LLM fallback inside
+    ``generate_strategy_from_context`` so the logic is never duplicated.
     """
-    ctx = build_strategy_context(
-        circuit, year, race_date, driver, session_type,
-    )
-
     tire = ctx.get("tire_analysis") or {}
     weather = ctx.get("weather_analysis") or {}
     rain = weather.get("rain_risk") or {}
@@ -427,7 +420,6 @@ def generate_strategy_offline(
     rec = tire.get("compound_rec") or {}
     deg = tire.get("degradation") or []
 
-    # ── Resolve key values ────────────────────────────────────────
     strategy_type = pw.get("strategy_type", "Unknown")
     compounds = rec.get("recommended_order", [])
     pit_laps = pw.get("recommended_pit_laps", [])
@@ -438,7 +430,6 @@ def generate_strategy_offline(
     avg_temp = temp.get("air_temp_avg_c")
     track_temp_est = temp.get("track_temp_est_c")
 
-    # ── Build recommendation text ─────────────────────────────────
     lines: list[str] = []
 
     lines.append("## Recommended Strategy")
@@ -547,7 +538,7 @@ def generate_strategy_offline(
 
     recommendation_text = "\n".join(lines)
 
-    result = {
+    return {
         "circuit": circuit,
         "year": year,
         "driver": driver or pw.get("driver"),
@@ -555,20 +546,184 @@ def generate_strategy_offline(
         "compounds": compounds,
         "pit_laps": pit_laps,
         "recommendation_text": recommendation_text,
-        "context_summary": ctx["context_text"],
+        "context_summary": ctx.get("context_text", ""),
         "confidence": "medium" if not ctx.get("error") else "low",
         "error": ctx.get("error"),
     }
 
+
+# ===================================================================
+# 4. generate_strategy_offline — rule-based fallback
+# ===================================================================
+
+def generate_strategy_offline(
+    circuit: str,
+    year: int,
+    race_date: str | date | None = None,
+    driver: str | None = None,
+    session_type: str = "R",
+) -> dict[str, Any]:
+    """Generate a strategy recommendation without an LLM.
+
+    Uses deterministic rules based on the tire and weather data.
+    Useful as a fallback when no API key is configured.
+
+    Returns
+    -------
+    dict with the same keys as ``generate_strategy``.
+    """
+    ctx = build_strategy_context(circuit, year, race_date, driver, session_type)
+    result = _build_offline_from_ctx(ctx, circuit, year, driver)
     logger.info(
         "Offline strategy generated for %s %d (%d chars)",
-        circuit, year, len(recommendation_text),
+        circuit, year, len(result["recommendation_text"]),
     )
     return result
 
 
 # ===================================================================
-# 4. run_strategy_node — LangGraph node entry-point
+# 5. generate_strategy_from_context — uses pre-built upstream data
+# ===================================================================
+
+def generate_strategy_from_context(
+    tire_analysis: dict[str, Any] | None,
+    weather_analysis: dict[str, Any] | None,
+    rag_context: dict[str, Any] | None,
+    circuit: str,
+    year: int,
+    session_type: str = "R",
+    driver: str | None = None,
+    revision_feedback: str | None = None,
+) -> dict[str, Any]:
+    """Generate a strategy from data already computed by upstream nodes.
+
+    Unlike ``generate_strategy()``, this function does **not** call
+    ``analyze_tire_strategy``, ``analyze_weather_impact``, or
+    ``retrieve_race_context``.  It assembles the LLM prompt directly
+    from the dicts produced by the tire/weather/rag graph nodes,
+    eliminating the duplicate API calls that ``generate_strategy``
+    would otherwise trigger.
+
+    Parameters
+    ----------
+    tire_analysis : dict | None
+        Output of ``analyze_tire_strategy`` (from tire_node in state).
+    weather_analysis : dict | None
+        Output of ``analyze_weather_impact`` (from weather_node in state).
+    rag_context : dict | None
+        Output of ``retrieve_race_context`` (from rag_node in state).
+    circuit, year, session_type, driver
+        Race identifiers forwarded to the LLM prompt.
+    revision_feedback : str | None
+        Evaluator findings from a previous rejected strategy.  When
+        present, injected as a second system message so the LLM knows
+        exactly which issues to fix in the revised output.
+
+    Returns
+    -------
+    dict with the same keys as ``generate_strategy``.
+    """
+    result: dict[str, Any] = {
+        "circuit": circuit,
+        "year": year,
+        "driver": driver,
+        "strategy_type": None,
+        "compounds": [],
+        "pit_laps": [],
+        "recommendation_text": "",
+        "context_summary": "",
+        "confidence": None,
+        "error": None,
+    }
+
+    # Collect partial errors from upstream agents without discarding them
+    upstream_errors: list[str] = []
+    if tire_analysis and tire_analysis.get("error"):
+        upstream_errors.append(f"Tire: {tire_analysis['error']}")
+    if weather_analysis and weather_analysis.get("error"):
+        upstream_errors.append(f"Weather: {weather_analysis['error']}")
+    if rag_context and rag_context.get("error"):
+        upstream_errors.append(f"RAG: {rag_context['error']}")
+
+    # Build context dict from pre-computed data — no re-fetching
+    ctx: dict[str, Any] = {
+        "tire_analysis": tire_analysis,
+        "weather_analysis": weather_analysis,
+        "rag_context": rag_context,
+        "error": "; ".join(upstream_errors) or None,
+    }
+    ctx["context_text"] = _assemble_context_text(ctx)
+    result["context_summary"] = ctx["context_text"]
+
+    # Extract structured fields from tire analysis
+    tire = tire_analysis or {}
+    pw = tire.get("pit_window") or {}
+    rec = tire.get("compound_rec") or {}
+
+    if driver is None:
+        driver = pw.get("driver")
+        result["driver"] = driver
+
+    result["strategy_type"] = pw.get("strategy_type")
+    result["pit_laps"] = pw.get("recommended_pit_laps", [])
+    result["compounds"] = rec.get("recommended_order", [])
+
+    # Call LLM
+    try:
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        llm = _get_llm()
+
+        user_prompt = (
+            f"Generate a race strategy recommendation for the "
+            f"{circuit} Grand Prix ({year}).\n"
+            f"Focus driver: {driver or 'race winner'}.\n\n"
+            f"Here is the data from the Tire Engineer, Weather Analyst, "
+            f"and Historical Database:\n\n"
+            f"{ctx['context_text']}"
+        )
+
+        messages = [
+            SystemMessage(content=_SYSTEM_PROMPT),
+        ]
+        if revision_feedback:
+            messages.append(
+                SystemMessage(
+                    content=(
+                        "IMPORTANT — the previous strategy was REJECTED by the "
+                        "evaluator.  You MUST address every issue listed below "
+                        "in your revised strategy:\n\n"
+                        f"{revision_feedback}"
+                    )
+                )
+            )
+        messages.append(HumanMessage(content=user_prompt))
+
+        response = llm.invoke(messages)
+        result["recommendation_text"] = response.content
+        result["confidence"] = "high" if not ctx.get("error") else "medium"
+
+        logger.info(
+            "LLM strategy generated for %s %d (%d chars)",
+            circuit, year, len(response.content),
+        )
+
+    except Exception as exc:
+        logger.warning(
+            "LLM generation failed (%s), falling back to offline strategy: %s",
+            type(exc).__name__, exc,
+        )
+        # Fallback uses the same pre-built ctx — still no re-fetching
+        offline = _build_offline_from_ctx(ctx, circuit, year, driver)
+        result["recommendation_text"] = offline["recommendation_text"]
+        result["confidence"] = "low"
+        result["error"] = f"LLM unavailable ({exc}); used rule-based fallback."
+
+    return result
+
+
+# ===================================================================
+# 6. run_strategy_node — LangGraph node entry-point
 # ===================================================================
 
 def run_strategy_node(state: dict[str, Any]) -> dict[str, Any]:

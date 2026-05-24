@@ -9,8 +9,13 @@ the state automatically.
 Important
 ---------
 These wrappers *read* upstream results from state rather than re-invoking
-the agents internally, which avoids duplicate data fetching (e.g. the
-strategy node no longer re-runs tire + weather analysis).
+the agents internally, which avoids duplicate data fetching (Bug B fix:
+``strategy_node`` reads ``tire_analysis``, ``weather_analysis``, and
+``rag_context`` already in state instead of re-running FastF1, Open-Meteo,
+and ChromaDB).  ``fan_in_node`` acts as a synchronisation barrier so
+``strategy_node`` fires exactly once with a fully-populated state (Bug A
+fix).  ``revision_node`` forwards evaluator feedback via
+``revision_feedback=`` so the LLM knows what to correct (Bug C fix).
 """
 
 from __future__ import annotations
@@ -68,6 +73,14 @@ def supervisor_node(state: dict[str, Any]) -> dict[str, Any]:
             f"Could not extract a circuit name from: '{user_text}'. "
             "Please specify a circuit (e.g. 'Silverstone 2023')."
         )
+
+    if year is None and "error" not in updates:
+        _oob = re.search(r"\b(20\d{2})\b", user_text.lower())
+        if _oob:
+            updates["error"] = (
+                f"Year {_oob.group(1)} is outside the supported range (2018–2029). "
+                "FastF1 has reliable data only from 2018 onward."
+            )
 
     logger.info(
         "Supervisor parsed → circuit=%s, year=%s, session=%s",
@@ -128,8 +141,8 @@ def _parse_query(text: str) -> tuple[str | None, int | None, str | None]:
     """Extract (circuit, year, session_type) from free text."""
     lower = text.lower().strip()
 
-    # --- Year ---
-    year_match = re.search(r"\b(20[0-2]\d)\b", lower)
+    # --- Year (FastF1 has reliable data from 2018 onward; cap at 2029) ---
+    year_match = re.search(r"\b(201[8-9]|202\d)\b", lower)
     year = int(year_match.group(1)) if year_match else None
 
     # --- Session type ---
@@ -231,15 +244,15 @@ def rag_node(state: dict[str, Any]) -> dict[str, Any]:
 # ===================================================================
 
 def strategy_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate a strategy recommendation.
+    """Generate a strategy recommendation from upstream data already in state.
 
-    Reads tire_analysis, weather_analysis, and rag_context from state
-    (already populated by upstream nodes) and calls the strategy agent.
-
-    On the first pass the agent generates from scratch; on revision
-    passes it receives ``revision_feedback`` from the evaluator.
+    Reads ``tire_analysis``, ``weather_analysis``, and ``rag_context``
+    that were populated by the parallel tire/weather/rag nodes and passes
+    them directly to the strategy agent.  This avoids the duplicate
+    FastF1/Open-Meteo/ChromaDB calls that would happen if the agent were
+    allowed to re-fetch data on its own.
     """
-    from agents.strategist_agent import generate_strategy, generate_strategy_offline
+    from agents.strategist_agent import generate_strategy_from_context
 
     circuit = state.get("circuit", "")
     year = state.get("year", 2024)
@@ -252,7 +265,10 @@ def strategy_node(state: dict[str, Any]) -> dict[str, Any]:
         }
 
     try:
-        result = generate_strategy(
+        result = generate_strategy_from_context(
+            tire_analysis=state.get("tire_analysis"),
+            weather_analysis=state.get("weather_analysis"),
+            rag_context=state.get("rag_context"),
             circuit=circuit,
             year=year,
             session_type=session_type,
@@ -328,16 +344,19 @@ def evaluator_node(state: dict[str, Any]) -> dict[str, Any]:
 def revision_node(state: dict[str, Any]) -> dict[str, Any]:
     """Re-generate strategy incorporating evaluator feedback.
 
-    Increments ``revision_count`` and injects the evaluator's findings
-    into the messages so the strategy agent can correct its output.
+    Uses ``generate_strategy_from_context`` so that:
+      - upstream data (tire/weather/rag) is read from state, not re-fetched.
+      - the evaluator's findings are passed as ``revision_feedback`` and
+        injected as a second system message in the LLM prompt, giving the
+        model explicit instructions on what to fix.
     """
-    from agents.strategist_agent import generate_strategy, generate_strategy_offline
+    from agents.strategist_agent import generate_strategy_from_context
 
     circuit = state.get("circuit", "")
     year = state.get("year", 2024)
     session_type = state.get("session_type", "R")
     revision_count = state.get("revision_count", 0)
-    feedback = state.get("revision_feedback", "")
+    feedback = state.get("revision_feedback") or None
 
     logger.info(
         "Revision #%d for %s %d — feedback: %s",
@@ -345,49 +364,25 @@ def revision_node(state: dict[str, Any]) -> dict[str, Any]:
         feedback[:120] if feedback else "(none)",
     )
 
-    # Inject feedback as a system-level hint
-    if feedback:
-        extra_messages = state.get("messages", []).copy()
-        extra_messages.append({
-            "role": "system",
-            "content": (
-                "The previous strategy was REJECTED by the evaluator. "
-                "Address the following issues in your revised strategy:\n\n"
-                f"{feedback}"
-            ),
-        })
-    else:
-        extra_messages = state.get("messages", [])
-
     try:
-        result = generate_strategy(
+        result = generate_strategy_from_context(
+            tire_analysis=state.get("tire_analysis"),
+            weather_analysis=state.get("weather_analysis"),
+            rag_context=state.get("rag_context"),
             circuit=circuit,
             year=year,
             session_type=session_type,
+            revision_feedback=feedback,
         )
         return {
             "strategy_recommendation": result,
             "revision_count": revision_count + 1,
-            "messages": extra_messages,
             "error": result.get("error"),
         }
     except Exception as exc:
         logger.error("Revision node failed: %s", exc, exc_info=True)
-        # Fallback to offline
-        try:
-            result = generate_strategy_offline(
-                circuit=circuit,
-                year=year,
-                session_type=session_type,
-            )
-            return {
-                "strategy_recommendation": result,
-                "revision_count": revision_count + 1,
-                "error": f"Revision LLM failed ({exc}); used offline fallback.",
-            }
-        except Exception as exc2:
-            return {
-                "strategy_recommendation": None,
-                "revision_count": revision_count + 1,
-                "error": f"Revision failed completely: {exc2}",
-            }
+        return {
+            "strategy_recommendation": None,
+            "revision_count": revision_count + 1,
+            "error": f"Revision failed: {exc}",
+        }

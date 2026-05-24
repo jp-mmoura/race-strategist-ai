@@ -9,12 +9,12 @@ Graph Topology
 ::
 
     START → supervisor → ┬─ tire_node    ─┐
-                         ├─ weather_node ─┤→ strategy → evaluator ──┬─→ END
-                         └─ rag_node     ─┘       ↑                 │
-                                                   │   (score < 45   │
-                                                   │    & retries    │
-                                                   │    < MAX)       │
-                                                   └── revision ←───┘
+                         ├─ weather_node ─┤→ fan_in → strategy → evaluator ──┬─→ END
+                         └─ rag_node     ─┘                ↑                 │
+                                                           │   (score < 45   │
+                                                           │    & retries    │
+                                                           │    < MAX)       │
+                                                           └── revision ←───┘
 
 The evaluator decides whether the strategy is acceptable:
   • score ≥ 45  → END  (Approved or Review — acceptable)
@@ -90,12 +90,19 @@ def _should_revise(state: dict) -> str:
 
 
 # ===================================================================
-# Fan-in gate: wait for all parallel data nodes
+# Fan-in node: synchronisation barrier for parallel data nodes
 # ===================================================================
 
-def _fan_in_gate(state: dict) -> str:
-    """After parallel data collection, always proceed to strategy."""
-    return "strategy"
+def fan_in_node(state: dict) -> dict:
+    """Synchronisation barrier between the parallel data nodes and strategy.
+
+    tire_node, weather_node, and rag_node all write into the shared
+    state concurrently.  Routing every outgoing edge through this node
+    makes LangGraph wait for all three to finish before strategy_node
+    is invoked, preventing strategy from running with a
+    partially-populated state or being triggered multiple times.
+    """
+    return {}
 
 
 # ===================================================================
@@ -114,6 +121,7 @@ def build_workflow() -> StateGraph:
     workflow.add_node("tire", tire_node)
     workflow.add_node("weather", weather_node)
     workflow.add_node("rag", rag_node)
+    workflow.add_node("fan_in", fan_in_node)
     workflow.add_node("strategy", strategy_node)
     workflow.add_node("evaluator", evaluator_node)
     workflow.add_node("revision", revision_node)
@@ -128,10 +136,15 @@ def build_workflow() -> StateGraph:
     workflow.add_edge("supervisor", "weather")
     workflow.add_edge("supervisor", "rag")
 
-    # Data nodes → strategy (fan-in)
-    workflow.add_edge("tire", "strategy")
-    workflow.add_edge("weather", "strategy")
-    workflow.add_edge("rag", "strategy")
+    # Data nodes → fan_in (synchronisation barrier)
+    # LangGraph only fires fan_in after all three incoming edges arrive,
+    # so strategy_node receives a fully-populated state exactly once.
+    workflow.add_edge("tire", "fan_in")
+    workflow.add_edge("weather", "fan_in")
+    workflow.add_edge("rag", "fan_in")
+
+    # fan_in → strategy (runs exactly once, with complete state)
+    workflow.add_edge("fan_in", "strategy")
 
     # strategy → evaluator
     workflow.add_edge("strategy", "evaluator")

@@ -57,6 +57,51 @@ _RAW_DIR = _PROJECT_ROOT / "data" / "raw"
 _TRACK_FEATURES_PATH = _RAW_DIR / "track_features.csv"
 _TRACK_HISTORY_PATH = _RAW_DIR / "track_history.csv"
 
+# Circuit-name aliases used by _find_track() for fuzzy matching.
+# Maps user-supplied names (lowercase) to the canonical track key used
+# in track_features.csv.  Defined at module level so the dict is built
+# once on import rather than on every call to _find_track().
+_ALIASES: dict[str, str] = {
+    "silverstone": "britain",
+    "monza": "italy",
+    "spa": "belgium",
+    "spa-francorchamps": "belgium",
+    "interlagos": "brazil",
+    "sao paulo": "brazil",
+    "são paulo": "brazil",
+    "montreal": "canada",
+    "gilles villeneuve": "canada",
+    "marina bay": "singapore",
+    "albert park": "australia",
+    "melbourne": "australia",
+    "sakhir": "bahrain",
+    "barcelona": "spain",
+    "catalunya": "spain",
+    "monte carlo": "monaco",
+    "monte-carlo": "monaco",
+    "red bull ring": "austria",
+    "spielberg": "austria",
+    "hungaroring": "hungary",
+    "budapest": "hungary",
+    "suzuka": "japan",
+    "shanghai": "china",
+    "sochi": "russia",
+    "cota": "usa",
+    "austin": "usa",
+    "yas marina": "abudhabi",
+    "abu dhabi": "abudhabi",
+    "mexico city": "mexico",
+    "hermanos rodriguez": "mexico",
+    "autodromo hermanos": "mexico",
+    "jeddah": "saudi arabia",
+    "las vegas": "usa",
+    "zandvoort": "netherlands",
+    "imola": "italy",
+    "baku": "azerbaijan",
+    "lusail": "qatar",
+    "losail": "qatar",
+}
+
 
 # ===================================================================
 # CSV loaders (cached at module level)
@@ -102,48 +147,6 @@ def _find_track(circuit: str) -> pd.Series | None:
         return match.iloc[0]
 
     # Substring match ("Silverstone" → "Britain", "Monza" → "Italy", etc.)
-    # Try common aliases
-    _ALIASES: dict[str, str] = {
-        "silverstone": "britain",
-        "monza": "italy",
-        "spa": "belgium",
-        "spa-francorchamps": "belgium",
-        "interlagos": "brazil",
-        "sao paulo": "brazil",
-        "são paulo": "brazil",
-        "montreal": "canada",
-        "gilles villeneuve": "canada",
-        "marina bay": "singapore",
-        "albert park": "australia",
-        "melbourne": "australia",
-        "sakhir": "bahrain",
-        "barcelona": "spain",
-        "catalunya": "spain",
-        "monte carlo": "monaco",
-        "monte-carlo": "monaco",
-        "red bull ring": "austria",
-        "spielberg": "austria",
-        "hungaroring": "hungary",
-        "budapest": "hungary",
-        "suzuka": "japan",
-        "shanghai": "china",
-        "sochi": "russia",
-        "cota": "usa",
-        "austin": "usa",
-        "yas marina": "abudhabi",
-        "abu dhabi": "abudhabi",
-        "mexico city": "mexico",
-        "hermanos rodriguez": "mexico",
-        "autodromo hermanos": "mexico",
-        "jeddah": "saudi arabia",
-        "las vegas": "usa",
-        "zandvoort": "netherlands",
-        "imola": "italy",
-        "baku": "azerbaijan",
-        "lusail": "qatar",
-        "losail": "qatar",
-    }
-
     resolved = _ALIASES.get(key, key)
     match = df[df["TRACK_LOWER"] == resolved]
     if not match.empty:
@@ -274,11 +277,18 @@ def calculate_tire_degradation(
         # Linear regression: LapTimeSec = a * TyreLife + b
         x = clean["TyreLife"].values.astype(float)
         y = clean["LapTimeSec"].values.astype(float)
+        finite_mask = np.isfinite(x) & np.isfinite(y)
+        x, y = x[finite_mask], y[finite_mask]
+        if len(x) < 3:
+            continue
         if np.std(x) == 0:
             deg_rate = 0.0
         else:
-            slope, _ = np.polyfit(x, y, 1)
-            deg_rate = round(float(slope), 4)
+            try:
+                slope, _ = np.polyfit(x, y, 1)
+                deg_rate = round(float(slope), 4)
+            except np.linalg.LinAlgError:
+                deg_rate = 0.0
 
         compound = (
             clean["Compound"].iloc[0]
