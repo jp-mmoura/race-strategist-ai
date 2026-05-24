@@ -1,0 +1,15 @@
+# ============================================
+# F1 Race Strategist AI - Development Dependencies
+# ============================================
+# Install alongside the main dependencies:
+#
+#   pip install -r requirements.txt -r requirements-dev.txt
+
+# Testing
+pytest>=8.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Linting & formatting
+ruff>=0.4.0
