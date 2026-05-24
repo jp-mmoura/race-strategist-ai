@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\Curso Engenharia de Computação\\\\2026-1\\\\race-strategist-ai-main\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(cd \"D:\\\\Curso Engenharia de Computação\\\\2026-1\\\\race-strategist-ai-main\"; Get-ChildItem -Recurse | Where-Object {$_.FullName} | Select-Object -ExpandProperty FullName)",
+      "Bash(Test-Path \"D:\\\\Curso Engenharia de Computação\\\\2026-1\\\\race-strategist-ai-main\\\\.env.example\")",
+      "PowerShell(Get-Command pytest -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command pytest.exe -ErrorAction SilentlyContinue)"
+    ]
+  }
+}
