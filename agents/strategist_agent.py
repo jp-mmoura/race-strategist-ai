@@ -49,32 +49,55 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # LLM configuration
 # ---------------------------------------------------------------------------
-_LLM_PROVIDER = os.getenv("STRATEGY_LLM_PROVIDER", "google")  # "google" or "openai"
+_LLM_PROVIDER = os.getenv("STRATEGY_LLM_PROVIDER", "google")  # "google", "openai", "deepseek", "claude"
 _LLM_MODEL = os.getenv("STRATEGY_LLM_MODEL", "gemini-2.0-flash")
 _LLM_TEMPERATURE = float(os.getenv("STRATEGY_LLM_TEMPERATURE", "0.3"))
 
-_VALID_PROVIDERS = ("google", "openai")
-
+_VALID_PROVIDERS = ["google", "openai", "deepseek", "claude"]
 
 def _get_llm():
-    """Instantiate the configured LLM (Google Gemini or OpenAI)."""
+    """Instantiate the configured LLM (Google Gemini, OpenAI, DeepSeek, or Claude)."""
+    
+    # ========== 1. VALIDAÇÃO DO PROVIDER ==========
     if _LLM_PROVIDER not in _VALID_PROVIDERS:
         raise ValueError(
             f"Unsupported STRATEGY_LLM_PROVIDER={_LLM_PROVIDER!r}. "
             f"Valid options: {_VALID_PROVIDERS}."
         )
+    
+    # ========== 2. GOOGLE GEMINI ==========
     if _LLM_PROVIDER == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=_LLM_MODEL,
             temperature=_LLM_TEMPERATURE,
         )
+    
+    # ========== 3. DEEPSEEK (API compatível com OpenAI) ==========
+    if _LLM_PROVIDER == "deepseek":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=_LLM_MODEL or "deepseek-chat",
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            base_url="https://api.deepseek.com/v1",
+            temperature=_LLM_TEMPERATURE,
+        )
+    
+    # ========== 4. CLAUDE (Anthropic) ==========
+    if _LLM_PROVIDER == "claude":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(
+            model=_LLM_MODEL or "claude-3-opus-20240229",
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            temperature=_LLM_TEMPERATURE,
+        )
+    
+    # ========== 5. OPENAI (fallback padrão) ==========
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
         model=_LLM_MODEL,
         temperature=_LLM_TEMPERATURE,
     )
-
 
 # ===================================================================
 # System prompt for the strategy LLM

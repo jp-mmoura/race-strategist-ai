@@ -41,13 +41,13 @@ else:
 # ---------------------------------------------------------------------------
 COLLECTIONS: dict[str, str] = {
     "f1_circuits": "F1 circuit reference data",
+    "f1_regulations": "FIA regulation documents (sporting, technical, financial, operational)",
     # Future:
-    # "f1_regulations": "FIA regulation documents",
     # "f1_race_history": "Historical race strategy summaries",
 }
 
 # Type alias for collection names
-CollectionName = Literal["f1_circuits"]
+CollectionName = Literal["f1_circuits", "f1_regulations"]
 
 
 # ===================================================================
@@ -118,3 +118,8 @@ if __name__ == "__main__":
     print("Collections:", list_collections())
     col = get_collection("f1_circuits")
     print(f"f1_circuits: {col.count()} documents")
+    try:
+        reg_col = get_collection("f1_regulations")
+        print(f"f1_regulations: {reg_col.count()} documents")
+    except ValueError as e:
+        print(f"f1_regulations not yet populated: {e}")

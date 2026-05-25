@@ -12,57 +12,82 @@ An AI-powered Formula 1 race strategy assistant built with **LangGraph**, **Fast
 ┌────────────────────────────▼────────────────────────────────┐
 │                    LangGraph Workflow                        │
 │                                                             │
-│  ┌────────────┐  ┌─────────────┐                            │
-│  │Tire Agent  │  │Weather Agent│                            │
-│  │(degradation│  │(Open-Meteo  │                            │
-│  │ pit window)│  │ rain/temp)  │                            │
-│  └─────┬──────┘  └──────┬──────┘                            │
-│        │                │                                   │
-│        └───────┬────────┘                                   │
-│                ▼                                            │
-│  ┌─────────────────────┐     ┌──────────────────────────┐   │
-│  │  Strategy Agent     │ ──▶ │   Evaluator Agent        │   │
-│  │  (LLM + rule-based) │     │   (coherence scoring)    │   │
-│  └─────────────────────┘     └──────────────────────────┘   │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-     ┌─────────┐       ┌──────────┐       ┌─────────┐
-     │ FastF1  │       │ ChromaDB │       │ Weather │
-     │  Tool   │       │   RAG    │       │  Tool   │
-     └─────────┘       └──────────┘       └─────────┘
+│  ┌────────────┐  ┌─────────────┐  ┌─────────────┐           │
+│  │Tire Agent  │  │Weather Agent│  │  RAG Agent  │           │
+│  │(degradation│  │(Open-Meteo  │  │(ChromaDB +  │           │
+│  │ pit window)│  │ rain/temp)  │  │  FastF1)    │           │
+│  └─────┬──────┘  └──────┬──────┘  └──────┬──────┘           │
+│        │                │                │                  │
+│        └────────────────┼────────────────┘                  │
+│                         ▼                                   │
+│               ┌───────────────────┐                         │
+│               │  Strategy Agent   │                         │
+│               │ (LLM + rule-based)│                         │
+│               └─────────┬─────────┘                         │
+│                         ▼                                   │
+│               ┌───────────────────┐                         │
+│               │  Evaluator Agent  │── (Score < 45?) ──┐     │
+│               └─────────┬─────────┘                   │     │
+│                         │ (Score ≥ 45)                ▼     │
+│                         │                        [Revision] │
+│                         ▼                             │     │
+│                      [Finish] ◀────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Project Structure
 
 ```
-f1-raceStrategistAI/
-├── graph/                  # LangGraph state & workflow
-│   └── state.py            # RaceStrategyState (TypedDict)
-├── tools/                  # Data acquisition tools
-│   ├── fastf1_tool.py      # FastF1 wrapper (sessions, laps, telemetry, tires)
-│   └── weather_tool.py     # Open-Meteo weather API
-├── rag/                    # Retrieval-Augmented Generation
-│   ├── ingestor.py         # Populates ChromaDB from raw data
-│   ├── embedder.py         # ChromaDB client & collection access
-│   └── retriever.py        # Semantic search + FastF1 enrichment
-├── agents/                 # LangGraph agent nodes
-│   ├── tire_agent.py       # Tire wear, degradation & pit-window analysis
-│   ├── strategist_agent.py # Strategy generation
-│   ├── evaluator_agent.py  # Strategy evaluation
-│   └── weather_agent.py    # Weather impact assessment
+race-strategist-ai/
+├── app/                        # Streamlit multi-page UI
+│   ├── Home.py                 # Landing page — hero, status panel, navigation
+│   ├── components/             # Reusable UI components
+│   │   ├── chat_interface.py   # Chat history, input, session state helpers
+│   │   ├── strategy_card.py    # F1-styled info cards with risk badges
+│   │   └── tire_chart.py       # Plotly degradation chart, stint table & timeline
+│   ├── pages/                  # Streamlit pages (auto-registered)
+│   │   ├── 01_🏁_Strategy.py   # Chat interface with LangGraph orchestrator
+│   │   ├── 02_🔧_Tire_Analysis.py  # Tire wear, degradation & pit-window dashboard
+│   │   └── 03_📊_History.py    # Historical race data & strategy comparison
+│   └── styles/
+│       └── theme.py            # Global CSS, colour palette, compound colours
+├── agents/                     # LangGraph agent nodes
+│   ├── supervisor.py           # Graph entry-point: compiles & runs the workflow
+│   ├── tire_agent.py           # Tire wear, degradation & pit-window analysis
+│   ├── strategist_agent.py     # Strategy generation (LLM + rule-based fallback)
+│   ├── evaluator_agent.py      # Coherence scoring against F1 rules & physics
+│   └── weather_agent.py        # Weather impact assessment
+├── graph/                      # LangGraph state & workflow definition
+│   ├── state.py                # RaceStrategyState (TypedDict)
+│   ├── nodes.py                # Node wrappers for each agent
+│   └── workflow.py             # Graph compilation & edge routing
+├── tools/                      # Data acquisition tools
+│   ├── fastf1_tool.py          # FastF1 wrapper (sessions, laps, telemetry, tires)
+│   └── weather_tool.py         # Open-Meteo weather API
+├── rag/                        # Retrieval-Augmented Generation
+│   ├── ingestor.py             # Populates ChromaDB from raw data
+│   ├── embedder.py             # ChromaDB client & collection access
+│   └── retriever.py            # Semantic search + FastF1 enrichment
 ├── data/
-│   └── raw/                # Source data
-│       ├── circuits.csv        # 77 F1 circuits
-│       ├── track_features.csv  # Track characteristics (tire stress, grip, etc.)
-│       ├── track_history.csv   # Historical track data with temperatures
-│       └── *.pdf               # FIA 2026 regulations
+│   └── raw/                    # Source data (committed)
+│       ├── circuits.csv            # 77 F1 circuits with coordinates
+│       ├── track_features.csv      # Track characteristics (tire stress, grip, etc.)
+│       ├── track_history.csv       # Historical track data with temperatures
+│       └── *.pdf                   # FIA 2026 Regulations (Sections A–F)
+├── tests/                      # Test suite
+│   ├── test_agents.py
+│   ├── test_rag.py
+│   ├── test_tools.py
+│   └── test_workflow.py
 ├── notebooks/
-│   └── rag_testing.ipynb   # RAG pipeline validation
-├── tests/                  # Test suite
-├── requirements.txt        # Python dependencies
-├── .env                    # API keys (not tracked)
+│   └── rag_testing.ipynb       # RAG pipeline validation
+├── .streamlit/
+│   └── config.toml             # Streamlit server configuration
+├── conftest.py                 # Pytest fixtures shared across test modules
+├── requirements.txt            # Runtime dependencies
+├── requirements-dev.txt        # Development / testing dependencies
+├── .env.example                # Environment variable template (copy → .env)
+├── .env                        # API keys — not tracked by git
 └── .gitignore
 ```
 
@@ -75,6 +100,7 @@ f1-raceStrategistAI/
 | Vector Store | [ChromaDB](https://www.trychroma.com/) |
 | Weather | [Open-Meteo](https://open-meteo.com/) |
 | UI | [Streamlit](https://streamlit.io/) |
+| Visualisation | [Plotly](https://plotly.com/python/) |
 | Data Processing | [Pandas](https://pandas.pydata.org/) |
 
 ## Quick Start
@@ -89,16 +115,37 @@ pip install -r requirements.txt
 
 ### 2. Configure Environment
 
-Copy `.env` and add your API keys:
+Copy the template and fill in your API key(s):
 
 ```bash
 cp .env.example .env
 ```
 
+Set the LLM provider and the corresponding key. Supported providers:
+
 ```env
+# Choose one: google | openai | deepseek | claude
+STRATEGY_LLM_PROVIDER=deepseek
+STRATEGY_LLM_MODEL=deepseek-chat
+
+# Google Gemini
+GOOGLE_GENAI_API_KEY=your_google_genai_api_key_here
+
+# OpenAI
 OPENAI_API_KEY=your_openai_api_key_here
-LANGCHAIN_API_KEY=your_langchain_api_key_here
+
+# DeepSeek  (OpenAI-compatible)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# Anthropic Claude
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# LangSmith tracing (optional)
+LANGCHAIN_API_KEY=your_langsmith_api_key_here
+LANGCHAIN_TRACING_V2=false
 ```
+
+> The app runs **without any LLM key** — it falls back to a rule-based offline strategy automatically.
 
 ### 3. Ingest Data
 
@@ -108,9 +155,15 @@ Populate ChromaDB with circuit data:
 python -m rag.ingestor
 ```
 
-### 4. Validate Setup
+### 4. Launch the UI
 
-Test that FastF1, RAG, and agents work:
+```bash
+streamlit run app/Home.py
+```
+
+### 5. Validate Setup (optional)
+
+Test that FastF1, RAG, and agents work correctly:
 
 ```bash
 # Test FastF1 data fetching
@@ -130,9 +183,21 @@ python -m agents.strategist_agent
 
 # Test Evaluator Agent (full pipeline)
 python -m agents.evaluator_agent
+
+# Run the full LangGraph workflow via CLI
+python -m agents.supervisor
 ```
 
 ## Key Features
+
+### 📊 Streamlit UI (`app/`)
+
+Multi-page telemetry-inspired dashboard:
+
+- **Home** — system status panel (LLM, FastF1 cache, ChromaDB, LangSmith), architecture topology, and navigation cards.
+- **01. Strategy Hub** — chat with the LangGraph orchestrator; model live incidents (Safety Car, weather, laps remaining) and view a Pirelli stint-coloured strategy timeline.
+- **02. Tire Analysis** — live tire wear charts, stint telemetry, degradation regression rates, pit-window cards, and track wear classification.
+- **03. Race History** — past GP official classifications, winner strategy reference cards, median lap-time comparison chart, compound distribution chart, and strategy stop-count breakdown.
 
 ### 🔧 FastF1 Tool (`tools/fastf1_tool.py`)
 
@@ -190,9 +255,9 @@ Combines static track data (CSVs) with live FastF1 session data to produce strat
 from agents.tire_agent import analyze_tire_strategy
 
 analysis = analyze_tire_strategy("Silverstone", 2022)
-print(analysis["track_wear"]["classification"])  # → "High Tire Wear"
+print(analysis["track_wear"]["classification"])       # → "High Tire Wear"
 print(analysis["compound_rec"]["recommended_order"])  # → ["MEDIUM", "MEDIUM", "HARD", "SOFT"]
-print(analysis["pit_window"]["strategy_type"])  # → "2-stop"
+print(analysis["pit_window"]["strategy_type"])        # → "2-stop"
 ```
 
 ### 🌦️ Weather Agent (`agents/weather_agent.py`)
@@ -217,25 +282,24 @@ print(impact["strategy_notes"][0])             # → "☀️ DRY CONDITIONS — 
 
 ### 🧠 Strategy Agent (`agents/strategist_agent.py`)
 
-Consumes outputs from Tire Agent + Weather Agent + RAG to generate a unified strategy recommendation:
+Consumes outputs from Tire Agent + Weather Agent + RAG to generate a unified strategy recommendation. Supports **Google Gemini**, **OpenAI**, **DeepSeek**, and **Anthropic Claude** as LLM backends, with a rule-based offline fallback when no key is configured.
 
 | Function | Description |
 |---|---|
 | `build_strategy_context(circuit, year, ...)` | Gathers all upstream data into a single context dict |
-| `generate_strategy(circuit, year, ...)` | LLM-powered recommendation via LangChain/OpenAI (with offline fallback) |
+| `generate_strategy(circuit, year, ...)` | LLM-powered recommendation (with offline fallback) |
+| `generate_strategy_from_context(...)` | LLM call from pre-built state — avoids duplicate API calls inside the graph |
 | `generate_strategy_offline(circuit, year, ...)` | Rule-based fallback — no LLM needed |
 | `run_strategy_node(state)` | LangGraph node entry-point |
-
-Output includes: strategy type, compound order, target pit laps, full recommendation text with justification, and confidence level.
 
 ```python
 from agents.strategist_agent import generate_strategy_offline
 
 strategy = generate_strategy_offline("Silverstone", 2023)
 print(strategy["strategy_type"])  # → "1-stop"
-print(strategy["compounds"])     # → ["MEDIUM", "SOFT"]
-print(strategy["pit_laps"])      # → [52]
-print(strategy["confidence"])    # → "medium"
+print(strategy["compounds"])      # → ["MEDIUM", "SOFT"]
+print(strategy["pit_laps"])       # → [52]
+print(strategy["confidence"])     # → "medium"
 ```
 
 ### ✅ Evaluator Agent (`agents/evaluator_agent.py`)
@@ -263,6 +327,23 @@ print(result["evaluation"]["score"])    # → 90
 print(result["evaluation"]["verdict"])  # → "✅ Approved"
 ```
 
+### 🤖 Supervisor (`agents/supervisor.py`)
+
+LangGraph graph entry-point. Compiles the full multi-agent workflow and exposes `run_graph()`:
+
+```python
+from agents.supervisor import run_graph
+
+result = run_graph(
+    user_query="What is the best strategy for Silverstone 2023?",
+    circuit="Silverstone",
+    year=2023,
+    session_type="R",
+)
+print(result["evaluation_result"]["verdict"])  # → "✅ Approved"
+print(result["evaluation_result"]["score"])    # → 90
+```
+
 ### 📊 Shared State (`graph/state.py`)
 
 `RaceStrategyState` TypedDict flows through LangGraph:
@@ -278,43 +359,8 @@ print(result["evaluation"]["verdict"])  # → "✅ Approved"
 | `weather_analysis` | `dict` | Weather agent output |
 | `strategy_recommendation` | `dict` | Strategy agent output |
 | `evaluation_result` | `dict` | Evaluation agent output |
-
-## Development & Running the App
-
-### 📊 Streamlit UI Control Panel
-
-To start the telemetry-inspired multi-page dashboard:
-
-```bash
-streamlit run app/Home.py
-```
-
-Features available in the UI:
-- **01. Strategy Hub**: Chat with the LangGraph orchestrator, model live race incidents (Safety Car, weather, laps remaining), and view a Pirelli stint-colored strategy timeline.
-- **02. Tire Analysis**: Inspect live tire wear charts, stint telemetry data, regression decay rates, and track wear classification.
-- **03. Race History**: Fetch past GP official classifications, look up winner strategy reference cards, and compare strategy options via interactive Plotly charts.
-
-### 🧬 LangGraph Workflow Execution
-
-You can run the full multi-agent workflow from Python or CLI:
-
-```bash
-# Run CLI test
-python3 -m agents.supervisor
-```
-
-Or invoke the compiled graph directly in Python:
-
-```python
-from agents.supervisor import run_graph
-
-result = run_graph("Silverstone 2023 race strategy")
-print("Verdict:", result["evaluation_result"]["verdict"])
-print("Score:", result["evaluation_result"]["score"])
-```
+| `revision_count` | `int` | Number of strategy revision loops |
 
 ## License
 
 MIT
-
-
