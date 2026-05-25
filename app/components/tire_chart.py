@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 from app.styles.theme import (
     BG_CARD,
@@ -171,36 +172,79 @@ def render_strategy_timeline(
     if not compounds or total_laps == 0:
         return
 
-    # Build stint boundaries
-    boundaries = [1] + [p + 1 for p in pit_laps] + [total_laps]
+    # Normalize pit lap values and build stint boundaries
+    sanitized_pits = sorted({p for p in pit_laps if 1 <= p < total_laps})
+    max_pit_count = max(0, len(compounds) - 1)
+    sanitized_pits = sanitized_pits[:max_pit_count]
+
+    if len(sanitized_pits) == max_pit_count:
+        boundaries = [1] + [p + 1 for p in sanitized_pits] + [total_laps + 1]
+    else:
+        boundaries = [1] + [p + 1 for p in sanitized_pits]
+        remaining_stints = len(compounds) - len(boundaries)
+        next_start = boundaries[-1]
+        if remaining_stints > 0:
+            remaining_laps = total_laps - next_start + 1
+            chunk = max(1, remaining_laps // (remaining_stints + 1))
+            for _ in range(remaining_stints):
+                next_start = min(total_laps, next_start + chunk)
+                boundaries.append(next_start)
+        boundaries.append(total_laps + 1)
+
+    # Ensure we have enough boundaries for each compound
+    while len(boundaries) < len(compounds) + 1:
+        boundaries.insert(-1, boundaries[-1] - 1)
+
     stints = []
     for i, compound in enumerate(compounds):
-        start = boundaries[i] if i < len(boundaries) else 1
-        end = boundaries[i + 1] if i + 1 < len(boundaries) else total_laps
-        width_pct = max(5, int((end - start) / total_laps * 100))
+        start = boundaries[i]
+        end = min(total_laps, boundaries[i + 1] - 1)
+        width_pct = max(5, round((end - start + 1) / total_laps * 100))
         stints.append((compound, start, end, width_pct))
 
-    timeline_html = '<div class="timeline-container">'
+    blocks: list[str] = []
     for i, (compound, start, end, width_pct) in enumerate(stints):
-        color = COMPOUND_COLORS.get(compound, "#888")
-        timeline_html += f"""
-            <div class="timeline-stint" style="
-                background-color: {color};
-                flex: {width_pct};
-                min-width: 60px;
-            ">
+        color = COMPOUND_COLORS.get(compound, "#888888")
+        blocks.append(
+            f"""
+            <div class=\"timeline-stint\" style=\"background-color: {color}; flex: {width_pct}; min-width: 60px;\">
                 {compound}<br>
-                <span style="font-size:0.65rem; opacity:0.8;">L{start}–L{end}</span>
+                <span class=\"timeline-laps\">L{start}–L{end}</span>
             </div>
-        """
-        # Add pit marker between stints
+            """
+        )
         if i < len(pit_laps):
             pit = pit_laps[i]
-            timeline_html += f"""
-                <div class="timeline-pit">
-                    <div class="timeline-pit-label">PIT L{pit}</div>
+            blocks.append(
+                f"""
+                <div class=\"timeline-pit\">
+                    <div class=\"timeline-pit-label\">PIT L{pit}</div>
                 </div>
-            """
+                """
+            )
 
-    timeline_html += "</div>"
-    st.markdown(timeline_html, unsafe_allow_html=True)
+    timeline_html = """
+    <div class=\"timeline-container\">
+        {blocks}
+    </div>
+    """.replace("{blocks}", "".join(blocks))
+
+    html = f"""
+    <html>
+      <head>
+        <style>
+          body {{ margin: 0; padding: 0; background: transparent; }}
+          .timeline-container {{ display: flex; align-items: center; gap: 0; padding: 1rem 0; font-family: Inter, sans-serif; }}
+          .timeline-stint {{ display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 4px; font-weight: 600; font-size: 0.8rem; color: #FFFFFF; position: relative; padding: 0 0.75rem; box-sizing: border-box; }}
+          .timeline-laps {{ display: block; font-size: 0.65rem; opacity: 0.85; margin-top: 0.25rem; }}
+          .timeline-pit {{ width: 2px; height: 55px; background: #FFFFFF; position: relative; margin: 0 6px; }}
+          .timeline-pit-label {{ position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #A0A0A0; white-space: nowrap; }}
+        </style>
+      </head>
+      <body>
+        {timeline_html}
+      </body>
+    </html>
+    """
+
+    components.html(html, height=120, scrolling=False)
