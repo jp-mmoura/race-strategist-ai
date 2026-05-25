@@ -180,27 +180,19 @@ def render_strategy_timeline(
         width_pct = max(5, int((end - start) / total_laps * 100))
         stints.append((compound, start, end, width_pct))
 
-    timeline_html = '<div class="timeline-container">'
+    parts = ['<div class="timeline-container">']
     for i, (compound, start, end, width_pct) in enumerate(stints):
         color = COMPOUND_COLORS.get(compound, "#888")
-        timeline_html += f"""
-            <div class="timeline-stint" style="
-                background-color: {color};
-                flex: {width_pct};
-                min-width: 60px;
-            ">
-                {compound}<br>
-                <span style="font-size:0.65rem; opacity:0.8;">L{start}–L{end}</span>
-            </div>
-        """
-        # Add pit marker between stints
+        parts.append(
+            f'<div class="timeline-stint" style="background-color:{color};flex:{width_pct};min-width:60px;">'
+            f'{compound}<br><span style="font-size:0.65rem;opacity:0.8;">L{start}–L{end}</span>'
+            f'</div>'
+        )
         if i < len(pit_laps):
             pit = pit_laps[i]
-            timeline_html += f"""
-                <div class="timeline-pit">
-                    <div class="timeline-pit-label">PIT L{pit}</div>
-                </div>
-            """
+            parts.append(
+                f'<div class="timeline-pit"><div class="timeline-pit-label">PIT L{pit}</div></div>'
+            )
 
-    timeline_html += "</div>"
-    st.markdown(timeline_html, unsafe_allow_html=True)
+    parts.append("</div>")
+    st.html("".join(parts))
