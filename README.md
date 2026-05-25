@@ -84,21 +84,22 @@ f1-raceStrategistAI/
 ```bash
 git clone https://github.com/jp-mmoura/race-strategist-ai.git
 cd race-strategist-ai
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment
 
-Copy `.env` and add your API keys:
+Copy `.env.example` and add your API keys:
 
 ```bash
 cp .env.example .env
 ```
 
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-LANGCHAIN_API_KEY=your_langchain_api_key_here
-```
+Edit the `.env` file with your keys:
+- `GOOGLE_API_KEY` or `OPENAI_API_KEY`
+- Configure `STRATEGY_LLM_PROVIDER` accordingly.
 
 ### 3. Ingest Data
 
