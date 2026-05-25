@@ -77,8 +77,6 @@ def inject_css():
             color: {WHITE} !important;
             font-size: 2rem !important;
             letter-spacing: -0.02em;
-            border-bottom: 2px solid {RED_ACCENT};
-            padding-bottom: 0.5rem;
         }}
 
         h2 {{
