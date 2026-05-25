@@ -8,6 +8,7 @@ race results, weather, and event schedules.
 
 import os
 import logging
+import threading
 from pathlib import Path
 
 import fastf1
@@ -32,6 +33,9 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 fastf1.Cache.enable_cache(CACHE_DIR)
 logger.info("FastF1 cache enabled at %s", CACHE_DIR)
 
+# Maximum seconds to wait for session.load(); override via FASTF1_TIMEOUT_SECONDS
+_FASTF1_TIMEOUT = int(os.getenv("FASTF1_TIMEOUT_SECONDS", "120"))
+
 
 # ===================================================================
 # Session helpers
@@ -43,6 +47,14 @@ def get_session(
     session_type: str = "R",
 ) -> fastf1.core.Session:
     """Load and return a FastF1 session.
+
+    Only laps and weather are loaded (``telemetry=False``, ``messages=False``)
+    to avoid downloading the large telemetry channels that are not needed for
+    strategy analysis.
+
+    The load is run in a daemon thread so that a network hang raises
+    ``TimeoutError`` after ``FASTF1_TIMEOUT_SECONDS`` (default 120) instead
+    of blocking indefinitely.
 
     Parameters
     ----------
@@ -58,10 +70,36 @@ def get_session(
     Returns
     -------
     fastf1.core.Session
-        The fully-loaded session object.
+        The loaded session object.
+
+    Raises
+    ------
+    TimeoutError
+        If ``session.load()`` does not finish within ``_FASTF1_TIMEOUT`` seconds.
     """
     session = fastf1.get_session(year, grand_prix, session_type)
-    session.load()
+
+    _load_exc: list[BaseException] = []
+
+    def _do_load() -> None:
+        try:
+            session.load(laps=True, telemetry=False, weather=True, messages=False)
+        except BaseException as exc:
+            _load_exc.append(exc)
+
+    _thread = threading.Thread(target=_do_load, daemon=True)
+    _thread.start()
+    _thread.join(timeout=_FASTF1_TIMEOUT)
+
+    if _thread.is_alive():
+        raise TimeoutError(
+            f"FastF1 session.load() did not complete within {_FASTF1_TIMEOUT}s "
+            f"({year} {grand_prix} {session_type}). "
+            "Increase FASTF1_TIMEOUT_SECONDS if needed."
+        )
+    if _load_exc:
+        raise _load_exc[0]
+
     logger.info("Loaded session: %s %s – %s", year, grand_prix, session_type)
     return session
 

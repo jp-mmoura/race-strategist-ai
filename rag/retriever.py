@@ -1,9 +1,11 @@
 """
 RAG Retriever — semantic search + FastF1 enrichment for the Race Strategist.
 
-Two retrieval modes:
-  1. **retrieve_circuits** — pure vector search against ChromaDB.
-  2. **retrieve_race_context** — combines circuit retrieval with live
+Three retrieval modes:
+  1. **retrieve_circuits** — pure vector search against ChromaDB f1_circuits.
+  2. **retrieve_regulations** — filtered vector search against f1_regulations,
+     with optional year and section constraints.
+  3. **retrieve_race_context** — combines circuit retrieval with live
      FastF1 data (stints, results, weather) to build a rich context
      string that an LLM can use to answer strategy questions.
 """
@@ -90,7 +92,87 @@ def retrieve_circuits(
 
 
 # ===================================================================
-# 2. Race-context retrieval (vector search + FastF1)
+# 2. Regulation retrieval (vector search with metadata filters)
+# ===================================================================
+
+def retrieve_regulations(
+    query: str,
+    year: int | None = None,
+    section: str | None = None,
+    n_results: int = 5,
+) -> list[dict[str, Any]]:
+    """Search the f1_regulations collection by semantic similarity.
+
+    Supports optional metadata filters so callers can restrict results
+    to a specific regulation year or section letter.
+
+    Parameters
+    ----------
+    query : str
+        Free-text question (e.g. ``"pit stop minimum time"``).
+    year : int | None
+        If provided, only chunks with ``metadata.year == year`` are
+        returned.  Pass ``None`` to search across all available years —
+        ChromaDB will naturally return the most semantically relevant
+        chunks regardless of year.
+    section : str | None
+        Single uppercase letter (``"A"``–``"F"``) to restrict to one
+        regulation section.  Pass ``None`` to search all sections.
+    n_results : int
+        Maximum number of chunks to return.
+
+    Returns
+    -------
+    list[dict]
+        Each dict contains ``document``, ``metadata``, and ``distance``.
+
+    Raises
+    ------
+    ValueError
+        If the ``f1_regulations`` collection does not exist (run the
+        ingestor first with ``python -m rag.ingestor --regulations``).
+    """
+    collection = get_collection("f1_regulations")
+
+    # Build where-filter
+    where: dict[str, Any] | None = None
+    if year is not None and section is not None:
+        where = {"$and": [{"year": {"$eq": year}}, {"section": {"$eq": section.upper()}}]}
+    elif year is not None:
+        where = {"year": {"$eq": year}}
+    elif section is not None:
+        where = {"section": {"$eq": section.upper()}}
+
+    kwargs: dict[str, Any] = {
+        "query_texts": [query],
+        "n_results": n_results,
+    }
+    if where:
+        kwargs["where"] = where
+
+    raw = collection.query(**kwargs)
+
+    results = []
+    for doc, meta, dist in zip(
+        raw["documents"][0],
+        raw["metadatas"][0],
+        raw["distances"][0],
+    ):
+        results.append({
+            "document": doc,
+            "metadata": meta,
+            "distance": dist,
+        })
+
+    logger.info(
+        "Regulation query '%s' (year=%s, section=%s) → %d results",
+        query, year, section, len(results),
+    )
+    return results
+
+
+# ===================================================================
+# 3. Race-context retrieval (vector search + FastF1)
 # ===================================================================
 
 def _stints_to_text(stints_df: pd.DataFrame) -> str:
@@ -280,7 +362,7 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    # Pure circuit search
+    # Test 1: Pure circuit search
     print("=" * 60)
     print("  Test 1: Circuit vector search")
     print("=" * 60)
@@ -288,9 +370,31 @@ if __name__ == "__main__":
     for h in hits:
         print(f"  [{h['distance']:.4f}] {h['metadata']['name']}")
 
-    # Full race context
+    # Test 2: Regulation search (year + section filters)
     print("\n" + "=" * 60)
-    print("  Test 2: Full race context — Silverstone 2022")
+    print("  Test 2: Regulation search (safety car — 2026 Sporting)")
+    print("=" * 60)
+    try:
+        reg_hits = retrieve_regulations(
+            "safety car deployment procedure",
+            year=2026,
+            section="B",
+            n_results=3,
+        )
+        for rh in reg_hits:
+            preview = rh["document"][:120].replace("\n", " ")
+            m = rh["metadata"]
+            print(
+                f"  [{rh['distance']:.4f}] {m['year']} Section {m['section']}"
+                f" chunk {m['chunk_index']}/{m['total_chunks']}: \"{preview}…\""
+            )
+    except ValueError as e:
+        print(f"  ⚠ Regulations not yet ingested: {e}")
+        print("  Run: python -m rag.ingestor --regulations")
+
+    # Test 3: Full race context
+    print("\n" + "=" * 60)
+    print("  Test 3: Full race context — Silverstone 2022")
     print("=" * 60)
     ctx = retrieve_race_context(
         query="what strategy won at Silverstone 2022?",
