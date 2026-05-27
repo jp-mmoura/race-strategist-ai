@@ -438,6 +438,26 @@ def generate_strategy_offline(
     avg_temp = temp.get("air_temp_avg_c")
     track_temp_est = temp.get("track_temp_est_c")
 
+    # ── RAG Cross-Validation ──────────────────────────────────────
+    rag = ctx.get("rag_context") or {}
+    rag_winner = None
+    rag_winner_compounds = []
+    rag_winner_stops = 0
+    rag_winner_strategy_type = "Unknown"
+
+    rag_results = rag.get("race_results")
+    if rag_results is not None and not rag_results.empty:
+        rag_winner = rag_results.iloc[0]["Abbreviation"]
+
+    rag_winner_stints = rag.get("winner_stints")
+    if rag_winner_stints is not None and not rag_winner_stints.empty:
+        # Get sequence of compounds used by actual winner
+        rag_winner_compounds = list(
+            rag_winner_stints.sort_values("Stint")["Compound"].dropna()
+        )
+        rag_winner_stops = max(0, len(rag_winner_compounds) - 1)
+        rag_winner_strategy_type = f"{rag_winner_stops}-stop" if rag_winner_stops > 0 else "0-stop"
+
     # ── Build recommendation text ─────────────────────────────────
     lines: list[str] = []
 
@@ -519,6 +539,25 @@ def generate_strategy_offline(
         risks.append("No major risks identified.")
     for r in risks:
         lines.append(f"- {r}")
+
+    lines.append("\n## Historical Cross-Verification (RAG)")
+    if rag_winner:
+        lines.append(f"- **Historical Winner**: {rag_winner}")
+        if rag_winner_compounds:
+            compounds_str = " → ".join(rag_winner_compounds)
+            lines.append(f"- **Winner's Actual Strategy**: {rag_winner_strategy_type} ({compounds_str})")
+            
+            # Check alignment
+            if compounds == rag_winner_compounds:
+                lines.append("- **Status**: ✅ Recommendation matches historical winner strategy exactly.")
+            else:
+                lines.append("- **Status**: ⚠️ Recommendation differs from historical winner strategy.")
+                lines.append(f"  - Recommended: {' → '.join(compounds)} ({strategy_type})")
+                lines.append(f"  - Actual: {compounds_str} ({rag_winner_strategy_type})")
+        else:
+            lines.append("- Winner strategy stints not available in RAG context.")
+    else:
+        lines.append("- No historical winner details found in RAG context.")
 
     lines.append("\n## Justification")
     justification: list[str] = []

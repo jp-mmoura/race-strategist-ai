@@ -1,0 +1,171 @@
+======================================================================
+  F1 RACE STRATEGIST — FULL PIPELINE EVALUATION
+  Run at: 2026-05-27 16:14:09
+  Scenarios: 5
+======================================================================
+
+──────────────────────────────────────────────────────────────────────
+  SCENARIO 1/5: British GP 2022
+  Circuit: Silverstone | Year: 2022
+──────────────────────────────────────────────────────────────────────
+  Generated: Driver: SAI | Strategy: 2-stop | Compounds: MEDIUM → MEDIUM → HARD → SOFT | Pit laps: [39, 52] | Eval score: 70/100 | Verdict: ⚠️ Review | Confidence: medium
+  Expected:  Winner: SAI (Ferrari) | Strategy: multi-stop | Compounds: SOFT → HARD → MEDIUM → SOFT | Laps: 52 | Rain: False | SC: True | Red flag: True
+  Auto-score: 4/5
+  Elapsed: 7.9s
+  Strategy text (first 500 chars):
+    ## Recommended Strategy
+    **2-stop** over 52 laps.
+    Compound order: **MEDIUM → MEDIUM → HARD → SOFT**.
+    Target pit stops: lap 39, lap 52.
+    
+    ## Compound Selection
+    - **Stint 1**: MEDIUM (deg: -0.0504 s/lap)
+    - **Stint 2**: MEDIUM (deg: +0.0696 s/lap)
+    - **Stint 3**: HARD (deg: +0.0585 s/lap)
+    - **Stint 4**: SOFT
+    
+    ## Pit Windows
+    - **Pit 1**: laps 34–39 (optimal ~39), currently on HARD
+    - **Pit 2**: laps 47–52 (optimal ~52), currently on SOFT
+    
+    ## Weather Contingency
+    - **HIGH RAIN RISK** — prepare intermediat
+  Evaluator findings (3):
+    [MINOR] SOFT_HIGH_WEAR: SOFT compound on a high-wear circuit (score 4.45/5). Acceptable only for a short final stint.
+    [CRITICAL] DRY_UNDER_RAIN: All-dry compound strategy under HIGH rain risk.
+    [MINOR] STINT_COVERAGE: Planned stint laps (45) differ from race distance (52) by 7 laps.
+
+──────────────────────────────────────────────────────────────────────
+  SCENARIO 2/5: Monaco GP 2023
+  Circuit: Monaco | Year: 2023
+──────────────────────────────────────────────────────────────────────
+  Generated: Driver: VER | Strategy: 1-stop | Compounds: MEDIUM → INTERMEDIATE | Pit laps: [] | Eval score: 95/100 | Verdict: ✅ Approved | Confidence: medium
+  Expected:  Winner: VER (Red Bull Racing) | Strategy: 1-stop | Compounds: MEDIUM → INTERMEDIATE | Laps: 78 | Rain: True | SC: False | Red flag: False
+  Auto-score: 4/5
+  Elapsed: 6.9s
+  Strategy text (first 500 chars):
+    ## Recommended Strategy
+    **1-stop** over 78 laps.
+    Compound order: **MEDIUM → INTERMEDIATE**.
+    
+    ## Compound Selection
+    - **Stint 1**: MEDIUM (deg: -0.0086 s/lap)
+    - **Stint 2**: INTERMEDIATE (deg: -0.9791 s/lap)
+    
+    ## Pit Windows
+    - No pit window data available.
+    
+    ## Weather Contingency
+    - **HIGH RAIN RISK** — prepare intermediates. If rain hits mid-stint, pit immediately to inters. Pre-plan a wet-weather pit stop lap range.
+    
+    ## Risk Assessment
+    - High rain risk — wrong tyre choice at the wrong time could 
+  Evaluator findings (1):
+    [MINOR] STINT_COVERAGE: Planned stint laps (72) differ from race distance (78) by 6 laps.
+
+──────────────────────────────────────────────────────────────────────
+  SCENARIO 3/5: Bahrain GP 2023
+  Circuit: Bahrain | Year: 2023
+──────────────────────────────────────────────────────────────────────
+  Generated: Driver: VER | Strategy: 2-stop | Compounds: SOFT → SOFT → HARD | Pit laps: [14, 36] | Eval score: 68/100 | Verdict: ⚠️ Review | Confidence: medium
+  Expected:  Winner: VER (Red Bull Racing) | Strategy: 2-stop | Compounds: SOFT → SOFT → HARD | Laps: 57 | Rain: False | SC: False | Red flag: False
+  Auto-score: 5/5
+  Elapsed: 5.7s
+  Strategy text (first 500 chars):
+    ## Recommended Strategy
+    **2-stop** over 57 laps.
+    Compound order: **SOFT → SOFT → HARD**.
+    Target pit stops: lap 14, lap 36.
+    
+    ## Compound Selection
+    - **Stint 1**: SOFT (deg: +0.1026 s/lap)
+    - **Stint 2**: SOFT (deg: +0.0440 s/lap)
+    - **Stint 3**: HARD (deg: -0.0636 s/lap)
+    
+    ## Pit Windows
+    - **Pit 1**: laps 9–14 (optimal ~14), currently on SOFT
+    - **Pit 2**: laps 31–36 (optimal ~36), currently on SOFT
+    
+    ## Weather Contingency
+    - **DRY CONDITIONS** — no weather contingency needed.
+    
+    ## Risk Assessment
+    - Hi
+  Evaluator findings (2):
+    [CRITICAL] SOFT_HIGH_WEAR: SOFT compound used 2x on a high-wear circuit (score 3.55/5).
+    [MAJOR] SOFT_START: Starting on SOFT at a high tire wear circuit.
+
+──────────────────────────────────────────────────────────────────────
+  SCENARIO 4/5: Hungarian GP 2023
+  Circuit: Budapest | Year: 2023
+──────────────────────────────────────────────────────────────────────
+  Generated: Driver: VER | Strategy: 2-stop | Compounds: MEDIUM → HARD → MEDIUM | Pit laps: [51] | Eval score: 95/100 | Verdict: ✅ Approved | Confidence: medium
+  Expected:  Winner: VER (Red Bull Racing) | Strategy: 1-stop | Compounds: MEDIUM → HARD | Laps: 70 | Rain: False | SC: False | Red flag: False
+  Auto-score: 4/5
+  Elapsed: 6.0s
+  Strategy text (first 500 chars):
+    ## Recommended Strategy
+    **2-stop** over 70 laps.
+    Compound order: **MEDIUM → HARD → MEDIUM**.
+    Target pit stops: lap 51.
+    
+    ## Compound Selection
+    - **Stint 1**: MEDIUM (deg: -0.0381 s/lap)
+    - **Stint 2**: HARD (deg: +0.0214 s/lap)
+    - **Stint 3**: MEDIUM (deg: -0.0451 s/lap)
+    
+    ## Pit Windows
+    - **Pit 1**: laps 46–51 (optimal ~51), currently on HARD
+    
+    ## Weather Contingency
+    - **DRY CONDITIONS** — no weather contingency needed.
+    - Track temp ~49 °C — consider extending first stint on harder compound.
+    
+    ## Ris
+  Evaluator findings (1):
+    [MINOR] DEG_VS_STOPS: 2-stop strategy with low degradation (-0.0206 s/lap).
+
+──────────────────────────────────────────────────────────────────────
+  SCENARIO 5/5: São Paulo GP 2022
+  Circuit: São Paulo | Year: 2022
+──────────────────────────────────────────────────────────────────────
+  Generated: Driver: RUS | Strategy: 2-stop | Compounds: SOFT → MEDIUM → SOFT | Pit laps: [24, 49] | Eval score: 83/100 | Verdict: ✅ Approved | Confidence: medium
+  Expected:  Winner: RUS (Mercedes) | Strategy: 2-stop | Compounds: SOFT → MEDIUM → SOFT | Laps: 71 | Rain: False | SC: True | Red flag: False
+  Auto-score: 5/5
+  Elapsed: 6.2s
+  Strategy text (first 500 chars):
+    ## Recommended Strategy
+    **2-stop** over 71 laps.
+    Compound order: **SOFT → MEDIUM → SOFT**.
+    Target pit stops: lap 24, lap 49.
+    
+    ## Compound Selection
+    - **Stint 1**: SOFT (deg: +0.0969 s/lap)
+    - **Stint 2**: MEDIUM (deg: +0.0373 s/lap)
+    - **Stint 3**: SOFT (deg: +0.0031 s/lap)
+    
+    ## Pit Windows
+    - **Pit 1**: laps 19–24 (optimal ~24), currently on SOFT
+    - **Pit 2**: laps 44–49 (optimal ~49), currently on MEDIUM
+    
+    ## Weather Contingency
+    - **DRY CONDITIONS** — no weather contingency needed.
+    - Track temp ~46 
+  Evaluator findings (2):
+    [MAJOR] SOFT_START: Starting on SOFT at a medium tire wear circuit.
+    [MINOR] STINT_COVERAGE: Planned stint laps (56) differ from race distance (71) by 15 laps.
+
+======================================================================
+  SUMMARY
+======================================================================
+  Total scenarios:    5
+  Avg auto-score:     4.4/5
+  Scenarios w/errors: 0
+
+  British GP 2022............... auto=4/5  eval=70/100  ⚠️ Review
+  Monaco GP 2023................ auto=4/5  eval=95/100  ✅ Approved
+  Bahrain GP 2023............... auto=5/5  eval=68/100  ⚠️ Review
+  Hungarian GP 2023............. auto=4/5  eval=95/100  ✅ Approved
+  São Paulo GP 2022............. auto=5/5  eval=83/100  ✅ Approved
+
+======================================================================

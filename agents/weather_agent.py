@@ -358,60 +358,73 @@ def analyze_weather_impact(
         result["error"] = str(exc)
         return result
 
-    # ── 1. Current conditions ─────────────────────────────────────
-    try:
-        current = get_current_weather(circuit=resolved)
-        wcode = int(current.get("weather_code", 0))
-        result["current_conditions"] = {
-            "temperature_c": round(current.get("temperature_2m", 0), 1),
-            "humidity_pct": round(current.get("relative_humidity_2m", 0), 1),
-            "wind_speed_kmh": round(current.get("wind_speed_10m", 0), 1),
-            "wind_dir_deg": round(current.get("wind_direction_10m", 0)),
-            "wind_gusts_kmh": round(current.get("wind_gusts_10m", 0), 1),
-            "precipitation_mm": round(current.get("precipitation", 0), 2),
-            "cloud_cover_pct": round(current.get("cloud_cover", 0), 1),
-            "weather_code": wcode,
-            "weather_desc": _WMO_CODES.get(wcode, "Unknown"),
-        }
-    except Exception as exc:
-        logger.warning("Could not fetch current weather: %s", exc)
+    # ── Detect whether this is a historical race ──────────────────
+    # If year is in the past, prefer FastF1 actual session weather
+    # over the Open-Meteo forecast (which reflects *current* weather).
+    from datetime import datetime as _dt
+    _is_historical = year is not None and year < _dt.now().year
 
-    # ── 2. Race-window forecast ───────────────────────────────────
-    try:
-        forecast_df = get_race_forecast(resolved, race_date)
-        if not forecast_df.empty:
-            result["forecast"] = forecast_df.to_dict(orient="records")
-
-            # Temperature analysis
-            temp = forecast_df["temperature_2m"]
-            result["temperature"] = {
-                "air_temp_min_c": round(float(temp.min()), 1),
-                "air_temp_max_c": round(float(temp.max()), 1),
-                "air_temp_avg_c": round(float(temp.mean()), 1),
-                "track_temp_est_c": round(float(temp.mean()) + 15, 1),
-                "note": _temperature_note(float(temp.mean())),
+    if _is_historical:
+        # ── HISTORICAL PATH: use FastF1 recorded weather ──────────
+        result = _build_from_historical_weather(
+            result, resolved, year, session_type,
+        )
+    else:
+        # ── LIVE / FUTURE PATH: use Open-Meteo forecast ──────────
+        # 1. Current conditions
+        try:
+            current = get_current_weather(circuit=resolved)
+            wcode = int(current.get("weather_code", 0))
+            result["current_conditions"] = {
+                "temperature_c": round(current.get("temperature_2m", 0), 1),
+                "humidity_pct": round(current.get("relative_humidity_2m", 0), 1),
+                "wind_speed_kmh": round(current.get("wind_speed_10m", 0), 1),
+                "wind_dir_deg": round(current.get("wind_direction_10m", 0)),
+                "wind_gusts_kmh": round(current.get("wind_gusts_10m", 0), 1),
+                "precipitation_mm": round(current.get("precipitation", 0), 2),
+                "cloud_cover_pct": round(current.get("cloud_cover", 0), 1),
+                "weather_code": wcode,
+                "weather_desc": _WMO_CODES.get(wcode, "Unknown"),
             }
+        except Exception as exc:
+            logger.warning("Could not fetch current weather: %s", exc)
 
-            # Wind analysis
-            ws = forecast_df["wind_speed_10m"]
-            wg = forecast_df.get("wind_gusts_10m", pd.Series(dtype=float))
-            result["wind"] = {
-                "avg_speed_kmh": round(float(ws.mean()), 1),
-                "max_speed_kmh": round(float(ws.max()), 1),
-                "max_gusts_kmh": round(float(wg.max()), 1) if not wg.empty else None,
-                "note": _wind_note(float(ws.max())),
-            }
-    except Exception as exc:
-        logger.warning("Could not fetch forecast: %s", exc)
+        # 2. Race-window forecast
+        try:
+            forecast_df = get_race_forecast(resolved, race_date)
+            if not forecast_df.empty:
+                result["forecast"] = forecast_df.to_dict(orient="records")
 
-    # ── 3. Rain risk ──────────────────────────────────────────────
-    try:
-        result["rain_risk"] = assess_rain_risk(resolved, race_date)
-    except Exception as exc:
-        logger.warning("Could not assess rain risk: %s", exc)
+                # Temperature analysis
+                temp = forecast_df["temperature_2m"]
+                result["temperature"] = {
+                    "air_temp_min_c": round(float(temp.min()), 1),
+                    "air_temp_max_c": round(float(temp.max()), 1),
+                    "air_temp_avg_c": round(float(temp.mean()), 1),
+                    "track_temp_est_c": round(float(temp.mean()) + 15, 1),
+                    "note": _temperature_note(float(temp.mean())),
+                }
+
+                # Wind analysis
+                ws = forecast_df["wind_speed_10m"]
+                wg = forecast_df.get("wind_gusts_10m", pd.Series(dtype=float))
+                result["wind"] = {
+                    "avg_speed_kmh": round(float(ws.mean()), 1),
+                    "max_speed_kmh": round(float(ws.max()), 1),
+                    "max_gusts_kmh": round(float(wg.max()), 1) if not wg.empty else None,
+                    "note": _wind_note(float(ws.max())),
+                }
+        except Exception as exc:
+            logger.warning("Could not fetch forecast: %s", exc)
+
+        # 3. Rain risk
+        try:
+            result["rain_risk"] = assess_rain_risk(resolved, race_date)
+        except Exception as exc:
+            logger.warning("Could not assess rain risk: %s", exc)
 
     # ── 4. Historical comparison (optional) ───────────────────────
-    if year is not None:
+    if year is not None and not _is_historical:
         result["historical_comparison"] = _compare_with_history(
             resolved, race_date, year, session_type,
         )
@@ -440,6 +453,92 @@ def compare_historical_weather(
 # ===================================================================
 # Internal helpers
 # ===================================================================
+
+def _build_from_historical_weather(
+    result: dict[str, Any],
+    circuit: str,
+    year: int,
+    session_type: str = "R",
+) -> dict[str, Any]:
+    """Populate weather analysis from FastF1 historical session data.
+
+    For past races, this is more accurate than the Open-Meteo forecast
+    (which reflects *current* weather, not race-day conditions).
+    """
+    try:
+        from tools.fastf1_tool import get_session, get_weather
+
+        session = get_session(year, circuit, session_type)
+        weather_df = get_weather(session)
+
+        if weather_df is None or weather_df.empty:
+            result["error"] = f"No historical weather for {circuit} {year}."
+            return result
+
+        # ── Temperature ───────────────────────────────────────────
+        air_temp = weather_df["AirTemp"]
+        track_temp = weather_df["TrackTemp"]
+        result["temperature"] = {
+            "air_temp_min_c": round(float(air_temp.min()), 1),
+            "air_temp_max_c": round(float(air_temp.max()), 1),
+            "air_temp_avg_c": round(float(air_temp.mean()), 1),
+            "track_temp_est_c": round(float(track_temp.mean()), 1),
+            "note": _temperature_note(float(air_temp.mean())),
+            "source": "fastf1_historical",
+        }
+
+        # ── Wind ──────────────────────────────────────────────────
+        if "WindSpeed" in weather_df.columns:
+            ws = weather_df["WindSpeed"]
+            result["wind"] = {
+                "avg_speed_kmh": round(float(ws.mean()), 1),
+                "max_speed_kmh": round(float(ws.max()), 1),
+                "max_gusts_kmh": None,
+                "note": _wind_note(float(ws.max())),
+            }
+
+        # ── Rain risk (from actual recorded data) ─────────────────
+        rainfall_col = weather_df.get("Rainfall", pd.Series([False]))
+        had_rain = bool(rainfall_col.any())
+        humidity = weather_df["Humidity"]
+
+        if had_rain:
+            risk_level = "High"
+            summary = (
+                f"Rain risk: High. Rainfall was recorded during "
+                f"{circuit} {year}. Intermediates/wets were needed."
+            )
+        elif float(humidity.mean()) > 80:
+            risk_level = "Medium"
+            summary = (
+                f"Rain risk: Medium. High humidity ({humidity.mean():.0f}%) "
+                f"at {circuit} {year} — damp conditions possible."
+            )
+        else:
+            risk_level = "None"
+            summary = f"Rain risk: None. Dry conditions at {circuit} {year}."
+
+        result["rain_risk"] = {
+            "risk_level": risk_level,
+            "max_precip_prob": 100.0 if had_rain else 0.0,
+            "total_rain_mm": None,
+            "wet_hours": 0,
+            "summary": summary,
+            "rain_windows": [],
+            "source": "fastf1_historical",
+        }
+
+        logger.info(
+            "Historical weather loaded for %s %d: rain=%s, air=%.1f°C",
+            circuit, year, had_rain, float(air_temp.mean()),
+        )
+
+    except Exception as exc:
+        logger.warning("Historical weather failed for %s %d: %s", circuit, year, exc)
+        result["error"] = f"Could not load historical weather: {exc}"
+
+    return result
+
 
 def _temperature_note(avg_temp_c: float) -> str:
     if avg_temp_c > 35:

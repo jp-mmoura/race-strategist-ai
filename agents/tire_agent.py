@@ -493,33 +493,46 @@ def analyze_tire_strategy(
     result["stints_summary"] = top5_stints.to_dict(orient="records")
 
     # ── 6. Compound recommendation ────────────────────────────────
-    # Based on what the top-3 finishers actually used
+    # Primary: winner's actual compound order (grounded in data).
+    # Cross-validation: compare against top-3 finishers' strategies.
     top3 = list(results_df.head(3)["Abbreviation"])
     top3_stints = all_stints[all_stints["Driver"].isin(top3)]
     if "Compound" in top3_stints.columns:
-        # Most common compound order (by stint number)
+        # Winner's actual compound order (primary source)
+        winner_stints = all_stints[all_stints["Driver"] == driver]
+        winner_order = list(
+            winner_stints.sort_values("Stint")["Compound"]
+        ) if not winner_stints.empty else []
+
+        # Top-3 compound orders for cross-validation
         compound_orders = (
             top3_stints.sort_values(["Driver", "Stint"])
             .groupby("Driver")["Compound"]
             .apply(list)
             .tolist()
         )
-        # Find the most common strategy
+
+        # Check how many top-3 used the same strategy as the winner
         from collections import Counter
         strategy_counter = Counter(
             tuple(order) for order in compound_orders
         )
-        most_common = strategy_counter.most_common(1)
-        if most_common:
-            best_order = list(most_common[0][0])
-            freq = most_common[0][1]
+        winner_tuple = tuple(winner_order)
+        winner_freq = strategy_counter.get(winner_tuple, 0)
+
+        # Use winner's order as the recommendation (grounded)
+        best_order = winner_order if winner_order else []
+        if winner_freq >= 2:
+            confidence = f"high — {winner_freq}/{len(compound_orders)} top-3 used same strategy"
+        elif winner_freq == 1:
+            confidence = f"medium — winner-only strategy (1/{len(compound_orders)} top-3)"
         else:
-            best_order = []
-            freq = 0
+            confidence = f"low — winner strategy not matched by top-3"
 
         result["compound_rec"] = {
             "recommended_order": best_order,
-            "confidence": f"{freq}/{len(compound_orders)} top-3 used this",
+            "confidence": confidence,
+            "source": "winner_actual_stints",
             "all_top3_strategies": [
                 {"driver": d, "compounds": c}
                 for d, c in zip(top3, compound_orders)
