@@ -1,0 +1,6 @@
+scenario,circuit,year,verdict,task_success,completeness,coherence,elapsed_sec,error,acc_compounds_match,acc_driver_match,acc_strategy_type_match,cohr_compounds_vs_deg,cohr_historical_verification,cohr_pit_laps_in_windows,cohr_type_vs_stops,cohr_weather_contingency,comp_compounds,comp_justification,comp_no_fatal_errors,comp_pit_windows,comp_strategy_type
+British GP 2022,Silverstone,2022,✅ SUCCESS,YES,5/5,4/5,2.9,,FAIL,PASS,PASS,PASS,PASS,PASS,FAIL,PASS,PASS,PASS,PASS,PASS,PASS
+Monaco GP 2023,Monaco,2023,❌ INCOMPLETE,NO,4/5,5/5,1.6,,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,FAIL,PASS
+Bahrain GP 2023,Bahrain,2023,✅ SUCCESS,YES,5/5,5/5,1.2,,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS
+Hungarian GP 2023,Budapest,2023,✅ SUCCESS,YES,5/5,5/5,1.3,,FAIL,PASS,FAIL,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS
+São Paulo GP 2022,São Paulo,2022,✅ SUCCESS,YES,5/5,5/5,1.3,,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS

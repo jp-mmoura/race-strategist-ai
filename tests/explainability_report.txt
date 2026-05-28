@@ -1,0 +1,243 @@
+======================================================================
+  EXPLAINABILITY SCORE EVALUATION — F1 Race Strategist AI
+  Run at: 2026-05-28 15:03:28
+======================================================================
+
+  PURPOSE: Verify that strategy justifications are clear enough
+  for a non-technical human to understand the reasoning.
+
+  CHECKS:
+    C1. Factors Considered — data sources explicitly listed
+    C2. Alternatives Considered — rejected options with reasons
+    C3. Confidence Assessment — confidence level + justification
+    C4. Justification Summary — plain-language explanation
+    C5. Historical Cross-Verification — data validation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  British GP 2022 (Silverstone 2022)
+  Score: 100/100 (100%) — 🟢 EXCELLENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [factors_considered] (20/20)
+  Explicit listing of data sources with weights
+    ✅ 'Factors Considered' section exists
+       4 bullet points found
+       4 weight annotations found
+       ✅ At least 3 data sources weighted
+       ✅ Contains specific numerical data
+
+  [alternatives_considered] (25/25)
+  Rejected alternatives with data-driven reasoning
+    ✅ 'Alternatives Considered' section exists
+       4 alternative(s) listed
+       ✅ At least 2 alternatives listed
+       ✅ Contains causal/reasoning language
+       ✅ Alternatives reference specific data
+       ✅ Explicitly states 'rejected' for each alternative
+
+  [confidence_assessment] (20/20)
+  Self-assessed confidence level with justification
+    ✅ 'Confidence Assessment' section exists
+       ✅ Confidence level: High
+       ✅ Confidence is justified with reasoning
+       ✅ References data completeness
+
+  [justification_summary] (20/20)
+  Plain-language summary understandable by non-technical audience
+    ✅ 'Justification Summary' section exists
+       Jargon density: 0.0%
+       ✅ Low jargon — accessible to non-technical audience
+       ✅ Uses conversational/inclusive language
+       Word count: 71
+       ✅ Sufficient detail
+
+  [historical_cross_verification] (15/15)
+  References historical race data for validation
+    ✅ 'Historical Cross-Verification' section exists
+       ✅ References specific driver abbreviation
+       ✅ Includes match/mismatch indicator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Monaco GP 2023 (Monaco 2023)
+  Score: 95/100 (95%) — 🟢 EXCELLENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [factors_considered] (20/20)
+  Explicit listing of data sources with weights
+    ✅ 'Factors Considered' section exists
+       4 bullet points found
+       4 weight annotations found
+       ✅ At least 3 data sources weighted
+       ✅ Contains specific numerical data
+
+  [alternatives_considered] (20/25)
+  Rejected alternatives with data-driven reasoning
+    ✅ 'Alternatives Considered' section exists
+       3 alternative(s) listed
+       ✅ At least 2 alternatives listed
+       ✅ Contains causal/reasoning language
+       ⚠️ Alternatives are generic (no numbers)
+       ✅ Explicitly states 'rejected' for each alternative
+
+  [confidence_assessment] (20/20)
+  Self-assessed confidence level with justification
+    ✅ 'Confidence Assessment' section exists
+       ✅ Confidence level: High
+       ✅ Confidence is justified with reasoning
+       ✅ References data completeness
+
+  [justification_summary] (20/20)
+  Plain-language summary understandable by non-technical audience
+    ✅ 'Justification Summary' section exists
+       Jargon density: 0.0%
+       ✅ Low jargon — accessible to non-technical audience
+       ✅ Uses conversational/inclusive language
+       Word count: 53
+       ✅ Sufficient detail
+
+  [historical_cross_verification] (15/15)
+  References historical race data for validation
+    ✅ 'Historical Cross-Verification' section exists
+       ✅ References specific driver abbreviation
+       ✅ Includes match/mismatch indicator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Bahrain GP 2023 (Bahrain 2023)
+  Score: 100/100 (100%) — 🟢 EXCELLENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [factors_considered] (20/20)
+  Explicit listing of data sources with weights
+    ✅ 'Factors Considered' section exists
+       4 bullet points found
+       4 weight annotations found
+       ✅ At least 3 data sources weighted
+       ✅ Contains specific numerical data
+
+  [alternatives_considered] (25/25)
+  Rejected alternatives with data-driven reasoning
+    ✅ 'Alternatives Considered' section exists
+       3 alternative(s) listed
+       ✅ At least 2 alternatives listed
+       ✅ Contains causal/reasoning language
+       ✅ Alternatives reference specific data
+       ✅ Explicitly states 'rejected' for each alternative
+
+  [confidence_assessment] (20/20)
+  Self-assessed confidence level with justification
+    ✅ 'Confidence Assessment' section exists
+       ✅ Confidence level: High
+       ✅ Confidence is justified with reasoning
+       ✅ References data completeness
+
+  [justification_summary] (20/20)
+  Plain-language summary understandable by non-technical audience
+    ✅ 'Justification Summary' section exists
+       Jargon density: 0.0%
+       ✅ Low jargon — accessible to non-technical audience
+       ✅ Uses conversational/inclusive language
+       Word count: 57
+       ✅ Sufficient detail
+
+  [historical_cross_verification] (15/15)
+  References historical race data for validation
+    ✅ 'Historical Cross-Verification' section exists
+       ✅ References specific driver abbreviation
+       ✅ Includes match/mismatch indicator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Hungarian GP 2023 (Budapest 2023)
+  Score: 100/100 (100%) — 🟢 EXCELLENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [factors_considered] (20/20)
+  Explicit listing of data sources with weights
+    ✅ 'Factors Considered' section exists
+       4 bullet points found
+       4 weight annotations found
+       ✅ At least 3 data sources weighted
+       ✅ Contains specific numerical data
+
+  [alternatives_considered] (25/25)
+  Rejected alternatives with data-driven reasoning
+    ✅ 'Alternatives Considered' section exists
+       2 alternative(s) listed
+       ✅ At least 2 alternatives listed
+       ✅ Contains causal/reasoning language
+       ✅ Alternatives reference specific data
+       ✅ Explicitly states 'rejected' for each alternative
+
+  [confidence_assessment] (20/20)
+  Self-assessed confidence level with justification
+    ✅ 'Confidence Assessment' section exists
+       ✅ Confidence level: High
+       ✅ Confidence is justified with reasoning
+       ✅ References data completeness
+
+  [justification_summary] (20/20)
+  Plain-language summary understandable by non-technical audience
+    ✅ 'Justification Summary' section exists
+       Jargon density: 0.0%
+       ✅ Low jargon — accessible to non-technical audience
+       ✅ Uses conversational/inclusive language
+       Word count: 55
+       ✅ Sufficient detail
+
+  [historical_cross_verification] (15/15)
+  References historical race data for validation
+    ✅ 'Historical Cross-Verification' section exists
+       ✅ References specific driver abbreviation
+       ✅ Includes match/mismatch indicator
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  São Paulo GP 2022 (São Paulo 2022)
+  Score: 100/100 (100%) — 🟢 EXCELLENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [factors_considered] (20/20)
+  Explicit listing of data sources with weights
+    ✅ 'Factors Considered' section exists
+       4 bullet points found
+       4 weight annotations found
+       ✅ At least 3 data sources weighted
+       ✅ Contains specific numerical data
+
+  [alternatives_considered] (25/25)
+  Rejected alternatives with data-driven reasoning
+    ✅ 'Alternatives Considered' section exists
+       2 alternative(s) listed
+       ✅ At least 2 alternatives listed
+       ✅ Contains causal/reasoning language
+       ✅ Alternatives reference specific data
+       ✅ Explicitly states 'rejected' for each alternative
+
+  [confidence_assessment] (20/20)
+  Self-assessed confidence level with justification
+    ✅ 'Confidence Assessment' section exists
+       ✅ Confidence level: High
+       ✅ Confidence is justified with reasoning
+       ✅ References data completeness
+
+  [justification_summary] (20/20)
+  Plain-language summary understandable by non-technical audience
+    ✅ 'Justification Summary' section exists
+       Jargon density: 0.0%
+       ✅ Low jargon — accessible to non-technical audience
+       ✅ Uses conversational/inclusive language
+       Word count: 58
+       ✅ Sufficient detail
+
+  [historical_cross_verification] (15/15)
+  References historical race data for validation
+    ✅ 'Historical Cross-Verification' section exists
+       ✅ References specific driver abbreviation
+       ✅ Includes match/mismatch indicator
+
+======================================================================
+  AGGREGATE RESULTS
+======================================================================
+  Average explainability: 99%
+  Range: 95% – 100%
+  Scenarios evaluated: 5/5
+
+  🟢 VERDICT: Strategies are well-explained and accessible.
+  Non-technical stakeholders should be able to understand
+  the reasoning behind each recommendation.
+
+======================================================================

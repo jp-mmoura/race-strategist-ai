@@ -1,0 +1,247 @@
+======================================================================
+  TASK SUCCESS RATE EVALUATION — F1 Race Strategist AI
+  Run at: 2026-05-28 15:44:45
+  Target: ≥70% Task Success Rate
+======================================================================
+
+  DEFINITION: A task is 'successful' when the pipeline produces a
+  COMPLETE strategy (all 5 completeness checks pass) that is also
+  COHERENT (≥3 of 5 coherence checks pass).
+
+  COMPLETENESS CHECKS (all must pass):
+    C1. Compounds     — ≥1 compound recommended
+    C2. Pit Windows   — structured window data present
+    C3. Justification — recommendation text ≥100 chars
+    C4. Strategy Type — defined (1-stop, 2-stop, etc.)
+    C5. No Fatal Err  — pipeline completed successfully
+
+  COHERENCE CHECKS (≥3/5 must pass):
+    A. Compounds vs degradation stints
+    B. Pit laps within computed windows
+    C. Strategy type vs actual number of stops
+    D. Weather contingency when rain risk exists
+    E. Historical cross-verification present
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  British GP 2022 (Silverstone 2022)
+  Verdict: ✅ SUCCESS
+  Completeness: 5/5
+  Coherence:    4/5
+  Time: 2.9s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Completeness:
+    ✅ [compounds] At least 1 compound recommended
+       4 compounds: MEDIUM → MEDIUM → HARD → SOFT
+    ✅ [pit_windows] At least 1 pit window with earliest/latest/optimal
+       2 window(s): L34-39 (opt ~39), L47-52 (opt ~52)
+    ✅ [justification] Recommendation text ≥ 100 characters
+       2756 chars of recommendation text
+    ✅ [strategy_type] Strategy type is defined (e.g. 1-stop, 2-stop)
+       Type: 2-stop
+    ✅ [no_fatal_errors] Pipeline completed without fatal exceptions
+       No errors
+
+  Coherence:
+    ✅ [compounds_vs_deg] Number of compounds matches degradation stints
+       Close match: 4 compounds vs 3 deg stints (±1 tolerance)
+    ✅ [pit_laps_in_windows] Recommended pit laps fall within computed windows
+       Pit 1: L39 ∈ [34,39] ✓; Pit 2: L52 ∈ [47,52] ✓
+    ❌ [type_vs_stops] Strategy type matches number of pit stops
+       Type says 2-stop but 3 stops implied by 4 compounds
+    ✅ [weather_contingency] Weather contingency plan present when rain risk exists
+       Rain risk=High, contingency mentions intermediates
+    ✅ [historical_verification] Historical winner data referenced in strategy
+       References winner: SAI
+
+  Accuracy (vs Ground Truth):
+    ✅ [driver_match] Both: SAI
+    ❌ [compounds_match] Gen: MEDIUM → MEDIUM → HARD → SOFT | GT: SOFT → HARD → MEDIUM → SOFT
+    ✅ [strategy_type_match] 2-stop qualifies as multi-stop
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Monaco GP 2023 (Monaco 2023)
+  Verdict: ❌ INCOMPLETE
+  Completeness: 4/5
+  Coherence:    5/5
+  Time: 1.6s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Completeness:
+    ✅ [compounds] At least 1 compound recommended
+       2 compounds: MEDIUM → INTERMEDIATE
+    ❌ [pit_windows] At least 1 pit window with earliest/latest/optimal
+       Pit Windows section exists but no structured data
+    ✅ [justification] Recommendation text ≥ 100 characters
+       2168 chars of recommendation text
+    ✅ [strategy_type] Strategy type is defined (e.g. 1-stop, 2-stop)
+       Type: 1-stop
+    ✅ [no_fatal_errors] Pipeline completed without fatal exceptions
+       No errors
+
+  Coherence:
+    ✅ [compounds_vs_deg] Number of compounds matches degradation stints
+       Both have 2 stints
+    ✅ [pit_laps_in_windows] Recommended pit laps fall within computed windows
+       No pits or windows — consistent (e.g., Monaco wet)
+    ✅ [type_vs_stops] Strategy type matches number of pit stops
+       1-stop matches 1 stops
+    ✅ [weather_contingency] Weather contingency plan present when rain risk exists
+       Rain risk=High, contingency mentions intermediates
+    ✅ [historical_verification] Historical winner data referenced in strategy
+       References winner: VER
+
+  Accuracy (vs Ground Truth):
+    ✅ [driver_match] Both: VER
+    ✅ [compounds_match] Exact match: MEDIUM → INTERMEDIATE
+    ✅ [strategy_type_match] Both: 1-stop
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Bahrain GP 2023 (Bahrain 2023)
+  Verdict: ✅ SUCCESS
+  Completeness: 5/5
+  Coherence:    5/5
+  Time: 1.2s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Completeness:
+    ✅ [compounds] At least 1 compound recommended
+       3 compounds: SOFT → SOFT → HARD
+    ✅ [pit_windows] At least 1 pit window with earliest/latest/optimal
+       2 window(s): L9-14 (opt ~14), L31-36 (opt ~36)
+    ✅ [justification] Recommendation text ≥ 100 characters
+       2262 chars of recommendation text
+    ✅ [strategy_type] Strategy type is defined (e.g. 1-stop, 2-stop)
+       Type: 2-stop
+    ✅ [no_fatal_errors] Pipeline completed without fatal exceptions
+       No errors
+
+  Coherence:
+    ✅ [compounds_vs_deg] Number of compounds matches degradation stints
+       Both have 3 stints
+    ✅ [pit_laps_in_windows] Recommended pit laps fall within computed windows
+       Pit 1: L14 ∈ [9,14] ✓; Pit 2: L36 ∈ [31,36] ✓
+    ✅ [type_vs_stops] Strategy type matches number of pit stops
+       2-stop matches 2 stops
+    ✅ [weather_contingency] Weather contingency plan present when rain risk exists
+       Rain risk=None — dry, contingency optional
+    ✅ [historical_verification] Historical winner data referenced in strategy
+       References winner: VER
+
+  Accuracy (vs Ground Truth):
+    ✅ [driver_match] Both: VER
+    ✅ [compounds_match] Exact match: SOFT → SOFT → HARD
+    ✅ [strategy_type_match] Both: 2-stop
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Hungarian GP 2023 (Budapest 2023)
+  Verdict: ✅ SUCCESS
+  Completeness: 5/5
+  Coherence:    5/5
+  Time: 1.3s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Completeness:
+    ✅ [compounds] At least 1 compound recommended
+       3 compounds: MEDIUM → HARD → MEDIUM
+    ✅ [pit_windows] At least 1 pit window with earliest/latest/optimal
+       1 window(s): L46-51 (opt ~51)
+    ✅ [justification] Recommendation text ≥ 100 characters
+       2081 chars of recommendation text
+    ✅ [strategy_type] Strategy type is defined (e.g. 1-stop, 2-stop)
+       Type: 2-stop
+    ✅ [no_fatal_errors] Pipeline completed without fatal exceptions
+       No errors
+
+  Coherence:
+    ✅ [compounds_vs_deg] Number of compounds matches degradation stints
+       Both have 3 stints
+    ✅ [pit_laps_in_windows] Recommended pit laps fall within computed windows
+       Pit 1: L51 ∈ [46,51] ✓
+    ✅ [type_vs_stops] Strategy type matches number of pit stops
+       2-stop matches 2 stops
+    ✅ [weather_contingency] Weather contingency plan present when rain risk exists
+       Rain risk=None — dry, contingency optional
+    ✅ [historical_verification] Historical winner data referenced in strategy
+       References winner: VER
+
+  Accuracy (vs Ground Truth):
+    ✅ [driver_match] Both: VER
+    ❌ [compounds_match] Gen: MEDIUM → HARD → MEDIUM | GT: MEDIUM → HARD
+    ❌ [strategy_type_match] Gen: 2-stop, GT: 1-stop
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  São Paulo GP 2022 (São Paulo 2022)
+  Verdict: ✅ SUCCESS
+  Completeness: 5/5
+  Coherence:    5/5
+  Time: 1.3s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Completeness:
+    ✅ [compounds] At least 1 compound recommended
+       3 compounds: SOFT → MEDIUM → SOFT
+    ✅ [pit_windows] At least 1 pit window with earliest/latest/optimal
+       2 window(s): L19-24 (opt ~24), L44-49 (opt ~49)
+    ✅ [justification] Recommendation text ≥ 100 characters
+       2151 chars of recommendation text
+    ✅ [strategy_type] Strategy type is defined (e.g. 1-stop, 2-stop)
+       Type: 2-stop
+    ✅ [no_fatal_errors] Pipeline completed without fatal exceptions
+       No errors
+
+  Coherence:
+    ✅ [compounds_vs_deg] Number of compounds matches degradation stints
+       Both have 3 stints
+    ✅ [pit_laps_in_windows] Recommended pit laps fall within computed windows
+       Pit 1: L24 ∈ [19,24] ✓; Pit 2: L49 ∈ [44,49] ✓
+    ✅ [type_vs_stops] Strategy type matches number of pit stops
+       2-stop matches 2 stops
+    ✅ [weather_contingency] Weather contingency plan present when rain risk exists
+       Rain risk=None — dry, contingency optional
+    ✅ [historical_verification] Historical winner data referenced in strategy
+       References winner: RUS
+
+  Accuracy (vs Ground Truth):
+    ✅ [driver_match] Both: RUS
+    ✅ [compounds_match] Exact match: SOFT → MEDIUM → SOFT
+    ✅ [strategy_type_match] Both: 2-stop
+
+
+======================================================================
+  AGGREGATE RESULTS
+======================================================================
+
+  Scenarios tested:    5
+  Pipeline errors:     0
+  Complete strategies:  4/5 (80%)
+  Coherent strategies:  5/5 (100%)
+  Successful (both):   4/5
+
+  ╔══════════════════════════════════════════╗
+  ║  TASK SUCCESS RATE:  80.0%               ║
+  ║  TARGET (≥70%):     ✅ MET                 ║
+  ╚══════════════════════════════════════════╝
+
+  Per-scenario breakdown:
+    British GP 2022............... comp=5/5  cohr=4/5  ✅ SUCCESS
+    Monaco GP 2023................ comp=4/5  cohr=5/5  ❌ INCOMPLETE
+    Bahrain GP 2023............... comp=5/5  cohr=5/5  ✅ SUCCESS
+    Hungarian GP 2023............. comp=5/5  cohr=5/5  ✅ SUCCESS
+    São Paulo GP 2022............. comp=5/5  cohr=5/5  ✅ SUCCESS
+
+  Weakest completeness checks:
+    compounds................ 5/5
+    justification............ 5/5
+    no_fatal_errors.......... 5/5
+    pit_windows.............. 4/5
+    strategy_type............ 5/5
+
+  Weakest coherence checks:
+    compounds_vs_deg......... 5/5
+    historical_verification.. 5/5
+    pit_laps_in_windows...... 5/5
+    type_vs_stops............ 4/5
+    weather_contingency...... 5/5
+
+======================================================================

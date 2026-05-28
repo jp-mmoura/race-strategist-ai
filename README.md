@@ -229,6 +229,12 @@ Consumes outputs from Tire Agent + Weather Agent + RAG to generate a unified str
 
 Output includes: strategy type, compound order, target pit laps, full recommendation text with justification, and confidence level.
 
+**Explainability features** — every strategy output (LLM and offline) includes:
+- **Factors Considered** — explicit data source attribution with weights (high/medium/low)
+- **Alternatives Considered** — ≥2 rejected strategies with data-driven reasoning
+- **Confidence Assessment** — self-assessed High/Medium/Low with justification
+- **Justification Summary** — plain-language explanation accessible to non-technical audience
+
 ```python
 from agents.strategist_agent import generate_strategy_offline
 
@@ -236,7 +242,7 @@ strategy = generate_strategy_offline("Silverstone", 2023)
 print(strategy["strategy_type"])  # → "1-stop"
 print(strategy["compounds"])     # → ["MEDIUM", "SOFT"]
 print(strategy["pit_laps"])      # → [52]
-print(strategy["confidence"])    # → "medium"
+print(strategy["confidence"])    # → "high"
 ```
 
 ### ✅ Evaluator Agent (`agents/evaluator_agent.py`)
@@ -347,13 +353,42 @@ To achieve **6/6 Checks (100% Coherent/Grounded)** across all scenarios, the fol
 2. **FastF1 Historical Weather Retrieval**: Updated the weather agent to detect if the query is for a past season and load the actual observed GP telemetry weather (`AirTemp`, `TrackTemp`, `Humidity`, `Rainfall`, `WindSpeed`) rather than querying the Open-Meteo forecast API for the current date.
 3. **RAG-Grounded Offline Verification**: Enhanced `generate_strategy_offline` to parse `rag_context` DataFrames directly, appending a `## Historical Cross-Verification (RAG)` report to the final output highlighting alignment or deviations against the actual winner's strategy.
 
-Run the evaluation and groundedness suites using:
+### 4. Explainability Score (`tests/explainability_eval.py`)
+
+Evaluates whether strategy justifications are understandable by non-technical stakeholders, scoring 5 criteria (100 pts max):
+
+| Criterion | Max | What it checks |
+|---|---|---|
+| Factors Considered | 20 | Data sources explicitly listed with weights |
+| Alternatives Considered | 25 | ≥2 rejected options with data-driven reasoning |
+| Confidence Assessment | 20 | Confidence level + structured justification |
+| Justification Summary | 20 | Plain-language, low-jargon explanation |
+| Historical Cross-Verification | 15 | Winner data referenced for validation |
+
+**Latest result: 99% average (5/5 scenarios 🟢 EXCELLENT)**
+
+### 5. Task Success Rate (`tests/task_success_eval.py`)
+
+Measures the percentage of scenarios that generate a **complete** (all 5 completeness checks pass) and **coherent** (≥3/5 coherence checks pass) strategy:
+
+- **Completeness**: compounds present, pit windows, justification ≥100 chars, strategy type defined, no fatal errors
+- **Coherence**: compounds vs degradation, pit laps in windows, type vs stops, weather contingency, historical verification
+
+**Latest result: 80% Task Success Rate (4/5) — target ≥70% ✅ MET**
+
+Run the full evaluation suite:
 ```bash
 # Run the evaluation pipeline (generates csv and log)
 python3 tests/run_eval_scenarios.py
 
 # Run the groundedness validation suite
 python3 tests/groundedness_analysis.py
+
+# Run the explainability score evaluation
+python3 tests/explainability_eval.py
+
+# Run the task success rate evaluation
+python3 tests/task_success_eval.py
 ```
 
 ## License

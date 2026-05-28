@@ -84,6 +84,11 @@ _SYSTEM_PROMPT = textwrap.dedent("""\
     synthesise data from the Tire Engineer, Weather Analyst, and
     Historical Database into a single, actionable race strategy.
 
+    IMPORTANT: Your audience includes engineers AND non-technical
+    stakeholders (team principals, sponsors, media).  Every section
+    must be understandable by someone who knows F1 but has no data
+    science background.
+
     Always structure your response with the following sections:
 
     ## Recommended Strategy
@@ -91,7 +96,11 @@ _SYSTEM_PROMPT = textwrap.dedent("""\
     and the target pit-stop laps.
 
     ## Compound Selection
-    Explain which compounds to use in each stint and why.
+    Explain which compounds to use in each stint and why.  For each
+    compound choice, briefly state WHY it is the best option for that
+    stint (e.g., "Mediums in stint 1 because degradation on softs
+    exceeds +0.09 s/lap at this circuit, meaning they would lose grip
+    by lap 12").
 
     ## Pit Windows
     Specify the optimal, earliest, and latest pit-stop laps for each stop.
@@ -102,12 +111,40 @@ _SYSTEM_PROMPT = textwrap.dedent("""\
     ## Risk Assessment
     Identify the top risks and how to mitigate them.
 
-    ## Justification
-    Summarise the key data points that support this strategy (tire
-    degradation rates, historical precedent, forecast conditions).
+    ## Factors Considered
+    Explicitly list EVERY data source you used and how much it
+    influenced your recommendation.  Use this format:
+    - **Tire degradation data** (weight: high/medium/low) — what it told you
+    - **Weather forecast** (weight: high/medium/low) — what it told you
+    - **Historical race data** (weight: high/medium/low) — what it told you
+    - **Track classification** (weight: high/medium/low) — what it told you
+    If any data source was unavailable or incomplete, say so.
+
+    ## Alternatives Considered
+    List at least 2 alternative strategies you evaluated and explain
+    WHY you rejected each one.  For example:
+    - "1-stop (Medium → Hard): rejected because degradation data shows
+       the hard compound loses 0.06 s/lap here, making a 30-lap hard
+       stint too slow by ~1.8 s."
+    Be specific — cite numbers from the data.
+
+    ## Confidence Assessment
+    Rate your overall confidence: **High**, **Medium**, or **Low**.
+    Then explain WHY in 1-2 sentences.  Consider:
+    - How complete was the data? (all 3 sources available?)
+    - Do the data sources agree with each other?
+    - Does your recommendation match the historical winner's strategy?
+    - Are there unusual conditions (rain, extreme heat) adding uncertainty?
+
+    ## Justification Summary
+    In plain language (no jargon), explain in 2-3 sentences why this
+    is the best strategy.  Write it so that a fan watching on TV could
+    understand.  Example: "We start on mediums because they last longer
+    on this track, switch to hards at lap 25 when grip drops, and this
+    matches what the race winner actually did last year."
 
     Be precise with lap numbers.  Use bullet points and keep the total
-    response under 600 words.
+    response under 800 words.
 """)
 
 
@@ -371,7 +408,18 @@ def generate_strategy(
 
         response = llm.invoke(messages)
         result["recommendation_text"] = response.content
-        result["confidence"] = "high" if not ctx.get("error") else "medium"
+
+        # Extract confidence from the LLM response if present
+        resp_lower = response.content.lower()
+        if "confidence" in resp_lower and "**high**" in resp_lower:
+            result["confidence"] = "high"
+        elif "confidence" in resp_lower and "**low**" in resp_lower:
+            result["confidence"] = "low"
+        elif "confidence" in resp_lower and "**medium**" in resp_lower:
+            result["confidence"] = "medium"
+        else:
+            # Fallback: data completeness heuristic
+            result["confidence"] = "high" if not ctx.get("error") else "medium"
 
         logger.info(
             "LLM strategy generated for %s %d (%d chars)",
@@ -392,6 +440,168 @@ def generate_strategy(
         result["error"] = f"LLM unavailable ({exc}); used rule-based fallback."
 
     return result
+
+
+# ===================================================================
+# Explainability helpers
+# ===================================================================
+
+def _generate_offline_alternatives(
+    strategy_type: str,
+    compounds: list[str],
+    deg: list[dict],
+    wear_class: str,
+    risk_level: str,
+    total_laps: int,
+    rag_winner_compounds: list[str],
+    rag_winner_strategy_type: str,
+) -> list[str]:
+    """Generate reasoning about discarded alternative strategies.
+
+    Produces at least 2 alternative strategies with data-driven
+    explanations for why each was rejected.
+    """
+    alt: list[str] = []
+    num_stops = max(0, len(compounds) - 1) if compounds else 0
+
+    # ── Alternative 1: fewer stops ────────────────────────────────
+    if num_stops >= 2:
+        fewer = f"{num_stops - 1}-stop"
+        if deg:
+            avg_deg = sum(d["deg_rate_sec_per_lap"] for d in deg) / len(deg)
+            laps_per_stint = total_laps // num_stops if num_stops else total_laps
+            time_loss = abs(avg_deg) * laps_per_stint
+            alt.append(
+                f"- **{fewer} strategy**: rejected because average "
+                f"degradation is {avg_deg:+.4f} s/lap. Over a "
+                f"{laps_per_stint}-lap stint, tires would lose ~{time_loss:.1f}s "
+                f"— too much to stay competitive without an extra stop."
+            )
+        else:
+            alt.append(
+                f"- **{fewer} strategy**: rejected — {wear_class} track "
+                f"classification makes longer stints risky."
+            )
+    elif num_stops == 1:
+        alt.append(
+            "- **0-stop (no pit) strategy**: rejected — regulations require "
+            "using at least two different dry-weather compounds during a race."
+        )
+    else:
+        alt.append(
+            "- **1-stop strategy**: rejected — insufficient data to "
+            "validate a 1-stop would be competitive."
+        )
+
+    # ── Alternative 2: more stops ─────────────────────────────────
+    if num_stops <= 1:
+        more = f"{num_stops + 1}-stop"
+        alt.append(
+            f"- **{more} strategy**: rejected because the extra pit stop "
+            f"costs ~22-25 seconds of track time, and the degradation data "
+            f"does not show enough tire wear to justify it."
+        )
+    else:
+        more = f"{num_stops + 1}-stop"
+        alt.append(
+            f"- **{more} strategy**: rejected — the additional pit stop "
+            f"would cost ~22-25s of track time with no significant tire "
+            f"life benefit based on degradation data."
+        )
+
+    # ── Alternative 3: different compound order ───────────────────
+    if compounds and len(compounds) >= 2:
+        reversed_order = list(reversed(compounds))
+        if reversed_order != compounds:
+            alt.append(
+                f"- **Reversed compound order "
+                f"({' → '.join(reversed_order)})**: rejected because "
+                f"starting on a {'harder' if compounds[0] in ('SOFT', 'MEDIUM') else 'softer'} "
+                f"compound at this {wear_class.lower()} circuit would "
+                f"{'sacrifice early pace' if compounds[0] in ('HARD',) else 'risk excessive early wear'}."
+            )
+
+    # ── Alternative 4: historical mismatch note ───────────────────
+    if rag_winner_compounds and compounds != rag_winner_compounds:
+        alt.append(
+            f"- **Historical winner's strategy "
+            f"({' → '.join(rag_winner_compounds)}, "
+            f"{rag_winner_strategy_type})**: was considered but not "
+            f"adopted because current conditions (weather, tire allocation) "
+            f"may differ from the historical race."
+        )
+
+    # ── Weather-based alternative ─────────────────────────────────
+    if risk_level in ("High", "Medium"):
+        # If recommending dry compounds under rain risk
+        wet_compounds = [c for c in compounds if c in ("INTERMEDIATE", "WET")]
+        if not wet_compounds:
+            alt.append(
+                f"- **Starting on intermediates**: considered due to "
+                f"{risk_level.lower()} rain risk, but rejected in favor of "
+                f"the dry primary strategy with intermediates on standby. "
+                f"If rain arrives, we will reactively switch."
+            )
+
+    return alt if alt else [
+        "- No clear alternative strategies identified with available data."
+    ]
+
+
+def _generate_plain_justification(
+    strategy_type: str,
+    compounds: list[str],
+    pit_laps: list[int],
+    wear_class: str,
+    risk_level: str,
+    rag_winner: str | None,
+    rag_winner_compounds: list[str],
+) -> str:
+    """Generate a plain-language justification a TV fan could understand.
+
+    Returns 2-3 sentences, no jargon.
+    """
+    parts: list[str] = []
+
+    # Opening — what we're doing
+    if compounds:
+        first = compounds[0]
+        parts.append(
+            f"We start the race on {first.lower()} tires because "
+            f"they offer the best balance of pace and durability for "
+            f"this {'demanding' if 'High' in wear_class else 'moderate wear'} "
+            f"circuit."
+        )
+    else:
+        parts.append("Strategy based on available data.")
+
+    # Middle — pit stops
+    if pit_laps:
+        pit_str = " and ".join(f"lap {l}" for l in pit_laps)
+        parts.append(
+            f"We plan to pit on {pit_str} to switch to fresher tires "
+            f"before grip drops off."
+        )
+
+    # Closing — confidence anchor
+    if rag_winner and rag_winner_compounds == compounds:
+        parts.append(
+            f"This matches exactly what {rag_winner} did to win "
+            f"this race, giving us strong confidence in the plan."
+        )
+    elif rag_winner:
+        parts.append(
+            f"The race winner ({rag_winner}) used a slightly different "
+            f"approach, but current conditions support our choice."
+        )
+
+    if risk_level in ("High", "Medium"):
+        parts.append(
+            f"We have rain tires ready as a backup given the "
+            f"{risk_level.lower()} chance of rain."
+        )
+
+    return " ".join(parts)
 
 
 # ===================================================================
@@ -559,30 +769,126 @@ def generate_strategy_offline(
     else:
         lines.append("- No historical winner details found in RAG context.")
 
-    lines.append("\n## Justification")
-    justification: list[str] = []
-    justification.append(
-        f"Track classification: {wear_class} "
-        f"(score {tw.get('score', '?')}/5)."
+    # ── Factors Considered ─────────────────────────────────────────
+    lines.append("\n## Factors Considered")
+
+    tire_weight = "high" if deg else "low"
+    lines.append(
+        f"- **Tire degradation data** (weight: {tire_weight}) — "
     )
     if deg:
         avg_deg = sum(d["deg_rate_sec_per_lap"] for d in deg) / len(deg)
-        justification.append(
-            f"Average degradation rate: {avg_deg:+.4f} s/lap "
-            f"across {len(deg)} stint(s)."
+        lines.append(
+            f"  Average degradation rate: {avg_deg:+.4f} s/lap "
+            f"across {len(deg)} stint(s). "
+            f"Track classification: {wear_class} (score {tw.get('score', '?')}/5)."
         )
+    else:
+        lines.append("  No degradation data available.")
+
+    wx_weight = "high" if risk_level in ("High", "Medium") else "medium"
+    lines.append(
+        f"- **Weather forecast** (weight: {wx_weight}) — "
+        f"Rain risk: {risk_level}."
+    )
     if avg_temp is not None:
-        justification.append(
-            f"Forecast air temp: {avg_temp:.1f} °C "
+        lines.append(
+            f"  Air temp: {avg_temp:.1f} °C "
             f"(est. track: {track_temp_est:.1f} °C)."
         )
-    justification.append(f"Rain risk: {risk_level}.")
-    if rec.get("confidence"):
-        justification.append(
-            f"Compound order confidence: {rec['confidence']}."
+
+    rag_weight = "high" if rag_winner else "low"
+    lines.append(
+        f"- **Historical race data** (weight: {rag_weight}) — "
+    )
+    if rag_winner:
+        lines.append(
+            f"  Winner {rag_winner} used "
+            f"{' → '.join(rag_winner_compounds)} ({rag_winner_strategy_type})."
         )
-    for j in justification:
-        lines.append(f"- {j}")
+    else:
+        lines.append("  No historical winner data available.")
+
+    lines.append(
+        f"- **Track classification** (weight: medium) — "
+        f"{wear_class} (score {tw.get('score', '?')}/5)."
+    )
+
+    # ── Alternatives Considered ────────────────────────────────────
+    lines.append("\n## Alternatives Considered")
+
+    alt_lines = _generate_offline_alternatives(
+        strategy_type=strategy_type,
+        compounds=compounds,
+        deg=deg,
+        wear_class=wear_class,
+        risk_level=risk_level,
+        total_laps=total_laps,
+        rag_winner_compounds=rag_winner_compounds,
+        rag_winner_strategy_type=rag_winner_strategy_type,
+    )
+    for a in alt_lines:
+        lines.append(a)
+
+    # ── Confidence Assessment ─────────────────────────────────────
+    lines.append("\n## Confidence Assessment")
+
+    data_sources_ok = sum([
+        bool(deg),
+        risk_level != "Unknown",
+        bool(rag_winner),
+    ])
+    sources_agree = (
+        compounds == rag_winner_compounds if rag_winner_compounds else True
+    )
+
+    if data_sources_ok == 3 and sources_agree:
+        conf_level = "**High**"
+        conf_reason = (
+            "All three data sources (tire, weather, historical) are available "
+            "and the recommendation aligns with the historical winner's strategy."
+        )
+    elif data_sources_ok >= 2:
+        conf_level = "**Medium**"
+        reasons = []
+        if not deg:
+            reasons.append("tire degradation data is missing")
+        if risk_level == "Unknown":
+            reasons.append("weather data is unavailable")
+        if not rag_winner:
+            reasons.append("no historical winner data")
+        if not sources_agree:
+            reasons.append(
+                "recommendation differs from historical winner's strategy"
+            )
+        conf_reason = (
+            f"Some uncertainty because: {'; '.join(reasons)}."
+            if reasons
+            else "Most data sources agree but some minor gaps exist."
+        )
+    else:
+        conf_level = "**Low**"
+        conf_reason = (
+            "Limited data availability — fewer than 2 of 3 data sources "
+            "returned usable results."
+        )
+
+    lines.append(f"- Confidence: {conf_level}")
+    lines.append(f"- Reason: {conf_reason}")
+
+    # ── Justification Summary (plain language) ────────────────────
+    lines.append("\n## Justification Summary")
+    lines.append(
+        _generate_plain_justification(
+            strategy_type=strategy_type,
+            compounds=compounds,
+            pit_laps=pit_laps,
+            wear_class=wear_class,
+            risk_level=risk_level,
+            rag_winner=rag_winner,
+            rag_winner_compounds=rag_winner_compounds,
+        )
+    )
 
     recommendation_text = "\n".join(lines)
 
@@ -595,7 +901,7 @@ def generate_strategy_offline(
         "pit_laps": pit_laps,
         "recommendation_text": recommendation_text,
         "context_summary": ctx["context_text"],
-        "confidence": "medium" if not ctx.get("error") else "low",
+        "confidence": conf_level.strip("*").lower() if not ctx.get("error") else "low",
         "error": ctx.get("error"),
     }
 

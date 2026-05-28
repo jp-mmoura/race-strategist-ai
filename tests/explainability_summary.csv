@@ -1,0 +1,6 @@
+scenario,circuit,year,total_score,max_score,percentage,grade,factors_considered,alternatives_considered,confidence_assessment,justification_summary,historical_cross_verification
+British GP 2022,Silverstone,2022,100,100,100%,🟢 EXCELLENT,20,25,20,20,15
+Monaco GP 2023,Monaco,2023,95,100,95%,🟢 EXCELLENT,20,20,20,20,15
+Bahrain GP 2023,Bahrain,2023,100,100,100%,🟢 EXCELLENT,20,25,20,20,15
+Hungarian GP 2023,Budapest,2023,100,100,100%,🟢 EXCELLENT,20,25,20,20,15
+São Paulo GP 2022,São Paulo,2022,100,100,100%,🟢 EXCELLENT,20,25,20,20,15
