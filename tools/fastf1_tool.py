@@ -37,12 +37,21 @@ logger.info("FastF1 cache enabled at %s", CACHE_DIR)
 # Session helpers
 # ===================================================================
 
+# In-memory session cache to avoid redundant loads when multiple agents
+# request the same session in a single pipeline run.
+_session_cache: dict[tuple, "fastf1.core.Session"] = {}
+
+
 def get_session(
     year: int,
     grand_prix: str | int,
     session_type: str = "R",
 ) -> fastf1.core.Session:
     """Load and return a FastF1 session.
+
+    Results are cached in-memory so that repeated calls with the same
+    ``(year, grand_prix, session_type)`` return instantly without
+    re-loading data from disk/network.
 
     Parameters
     ----------
@@ -60,10 +69,28 @@ def get_session(
     fastf1.core.Session
         The fully-loaded session object.
     """
+    # Normalise the cache key so that "silverstone" and "Silverstone"
+    # hit the same entry.
+    gp_key = grand_prix.lower().strip() if isinstance(grand_prix, str) else grand_prix
+    cache_key = (year, gp_key, session_type)
+
+    if cache_key in _session_cache:
+        logger.info(
+            "Session cache HIT: %s %s – %s", year, grand_prix, session_type,
+        )
+        return _session_cache[cache_key]
+
     session = fastf1.get_session(year, grand_prix, session_type)
     session.load()
-    logger.info("Loaded session: %s %s – %s", year, grand_prix, session_type)
+    _session_cache[cache_key] = session
+    logger.info("Loaded session: %s %s – %s (cached)", year, grand_prix, session_type)
     return session
+
+
+def clear_session_cache() -> None:
+    """Clear the in-memory session cache (useful between test runs)."""
+    _session_cache.clear()
+    logger.info("Session cache cleared.")
 
 
 # ===================================================================

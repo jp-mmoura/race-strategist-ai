@@ -1,0 +1,164 @@
+======================================================================
+  TOOL SELECTION ACCURACY ANALYSIS — F1 Race Strategist AI
+  Run at: 2026-05-27 21:36:31
+======================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  British GP 2022 (Silverstone 2022)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  fastf1_session..................... ✅ CORRECT — FastF1 session loaded
+  tire_tools......................... ✅ CORRECT — all tire data tools invoked
+  weather_source..................... ✅ CORRECT — historical race uses FastF1 weather (Open-Meteo NOT called)
+  rain_detection..................... ✅ CORRECT — rain scenario uses FastF1 historical rainfall data
+  rag_invoked........................ ✅ CORRECT — RAG pipeline invoked (via FastF1)
+  session_efficiency................. ✅ OK — get_session called 5x (cached in-memory after first load)
+
+  Tool calls:
+    fastf1_tool.get_race_results: 5x
+    fastf1_tool.get_session: 5x
+    fastf1_tool.get_stints: 6x
+    fastf1_tool.get_tire_data: 10x
+    fastf1_tool.get_weather: 5x
+
+  Findings:
+    • get_session called 5x (tire_agent + weather_agent + rag_retriever)
+    • ✅ get_race_results called
+    • ✅ get_stints called
+    • ✅ get_tire_data called
+    • Weather source: FastF1 historical (correct for past race)
+    • Rain detection: via FastF1 Rainfall column (historical)
+    • RAG pipeline ran via retrieve_race_context → FastF1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Monaco GP 2023 (Monaco 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  fastf1_session..................... ✅ CORRECT — FastF1 session loaded
+  tire_tools......................... ✅ CORRECT — all tire data tools invoked
+  weather_source..................... ✅ CORRECT — historical race uses FastF1 weather (Open-Meteo NOT called)
+  rain_detection..................... ✅ CORRECT — rain scenario uses FastF1 historical rainfall data
+  rag_invoked........................ ✅ CORRECT — RAG pipeline invoked (via FastF1)
+  session_efficiency................. ✅ OK — get_session called 5x (cached in-memory after first load)
+
+  Tool calls:
+    fastf1_tool.get_race_results: 5x
+    fastf1_tool.get_session: 5x
+    fastf1_tool.get_stints: 6x
+    fastf1_tool.get_tire_data: 10x
+    fastf1_tool.get_weather: 5x
+
+  Findings:
+    • get_session called 5x (tire_agent + weather_agent + rag_retriever)
+    • ✅ get_race_results called
+    • ✅ get_stints called
+    • ✅ get_tire_data called
+    • Weather source: FastF1 historical (correct for past race)
+    • Rain detection: via FastF1 Rainfall column (historical)
+    • RAG pipeline ran via retrieve_race_context → FastF1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Bahrain GP 2023 (Bahrain 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  fastf1_session..................... ✅ CORRECT — FastF1 session loaded
+  tire_tools......................... ✅ CORRECT — all tire data tools invoked
+  weather_source..................... ✅ CORRECT — historical race uses FastF1 weather (Open-Meteo NOT called)
+  rain_detection..................... ✅ N/A — dry race (no rain detection needed)
+  rag_invoked........................ ✅ CORRECT — RAG pipeline invoked (via FastF1)
+  session_efficiency................. ✅ OK — get_session called 5x (cached in-memory after first load)
+
+  Tool calls:
+    fastf1_tool.get_race_results: 5x
+    fastf1_tool.get_session: 5x
+    fastf1_tool.get_stints: 6x
+    fastf1_tool.get_tire_data: 10x
+    fastf1_tool.get_weather: 5x
+
+  Findings:
+    • get_session called 5x (tire_agent + weather_agent + rag_retriever)
+    • ✅ get_race_results called
+    • ✅ get_stints called
+    • ✅ get_tire_data called
+    • Weather source: FastF1 historical (correct for past race)
+    • RAG pipeline ran via retrieve_race_context → FastF1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Hungarian GP 2023 (Budapest 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  fastf1_session..................... ✅ CORRECT — FastF1 session loaded
+  tire_tools......................... ✅ CORRECT — all tire data tools invoked
+  weather_source..................... ✅ CORRECT — historical race uses FastF1 weather (Open-Meteo NOT called)
+  rain_detection..................... ✅ N/A — dry race (no rain detection needed)
+  rag_invoked........................ ✅ CORRECT — RAG pipeline invoked (via FastF1)
+  session_efficiency................. ✅ OK — get_session called 5x (cached in-memory after first load)
+
+  Tool calls:
+    fastf1_tool.get_race_results: 5x
+    fastf1_tool.get_session: 5x
+    fastf1_tool.get_stints: 6x
+    fastf1_tool.get_tire_data: 10x
+    fastf1_tool.get_weather: 5x
+
+  Findings:
+    • get_session called 5x (tire_agent + weather_agent + rag_retriever)
+    • ✅ get_race_results called
+    • ✅ get_stints called
+    • ✅ get_tire_data called
+    • Weather source: FastF1 historical (correct for past race)
+    • RAG pipeline ran via retrieve_race_context → FastF1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  São Paulo GP 2022 (São Paulo 2022)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  fastf1_session..................... ✅ CORRECT — FastF1 session loaded
+  tire_tools......................... ✅ CORRECT — all tire data tools invoked
+  weather_source..................... ✅ CORRECT — historical race uses FastF1 weather (Open-Meteo NOT called)
+  rain_detection..................... ✅ N/A — dry race (no rain detection needed)
+  rag_invoked........................ ✅ CORRECT — RAG pipeline invoked (via FastF1)
+  session_efficiency................. ✅ OK — get_session called 5x (cached in-memory after first load)
+
+  Tool calls:
+    fastf1_tool.get_race_results: 5x
+    fastf1_tool.get_session: 5x
+    fastf1_tool.get_stints: 6x
+    fastf1_tool.get_tire_data: 10x
+    fastf1_tool.get_weather: 5x
+
+  Findings:
+    • get_session called 5x (tire_agent + weather_agent + rag_retriever)
+    • ✅ get_race_results called
+    • ✅ get_stints called
+    • ✅ get_tire_data called
+    • Weather source: FastF1 historical (correct for past race)
+    • RAG pipeline ran via retrieve_race_context → FastF1
+
+======================================================================
+  SUMMARY
+======================================================================
+
+  Scenarios analyzed: 5
+  Total checks:       30
+  ✅ Passed:           30
+  ⚠️  Warnings:        0
+  ❌ Failed:           0
+  Total issues:       0
+
+  ✅ British GP 2022............... checks: 6✅ 0⚠️ 0❌  issues: 0
+  ✅ Monaco GP 2023................ checks: 6✅ 0⚠️ 0❌  issues: 0
+  ✅ Bahrain GP 2023............... checks: 6✅ 0⚠️ 0❌  issues: 0
+  ✅ Hungarian GP 2023............. checks: 6✅ 0⚠️ 0❌  issues: 0
+  ✅ São Paulo GP 2022............. checks: 6✅ 0⚠️ 0❌  issues: 0
+
+  SUPERVISOR ASSESSMENT:
+  ------------------------------------------------------------
+  ✅ All tool selections are CORRECT. The supervisor routing and agent tool invocations are properly configured.
+  No changes needed in supervisor.py or agent tool calls.
+
+======================================================================
