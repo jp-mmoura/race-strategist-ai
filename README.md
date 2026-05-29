@@ -374,7 +374,19 @@ Measures the percentage of scenarios that generate a **complete** (all 5 complet
 - **Completeness**: compounds present, pit windows, justification ≥100 chars, strategy type defined, no fatal errors
 - **Coherence**: compounds vs degradation, pit laps in windows, type vs stops, weather contingency, historical verification
 
-**Latest result: 80% Task Success Rate (4/5) — target ≥70% ✅ MET**
+**Latest result: 100% Task Success Rate (5/5) — target ≥70% ✅ MET**
+
+### 6. Automated Unit & Integration Tests
+
+The repository features comprehensive automated test files to verify component sanity, tool validation, and vector database responses:
+- `tests/test_tools.py`: Validates FastF1 session retrieval, stints extraction, tire data structure, weather tables, and live Open-Meteo API forecasts.
+- `tests/test_rag.py`: Verifies semantic circuit retrieval from ChromaDB vector search and proper F1 context assembly.
+- `tests/test_agents.py`: Tests Tire wear classification, Weather impact assessments, and Offline fallback recommendations for strategist schemas.
+
+Run the unit tests suite:
+```bash
+python3 -m unittest discover -s tests -p "test_*.py"
+```
 
 Run the full evaluation suite:
 ```bash
