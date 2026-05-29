@@ -1,0 +1,6 @@
+scenario,circuit,year,seq_tire_agent,seq_weather_agent,seq_rag_retriever,seq_strategy_offline,seq_evaluator,seq_total,par_data_phase,par_total,speedup,bottleneck,over_threshold
+British GP 2022,Silverstone,2022,1.32,0.00,0.01,0.02,0.00,1.35,0.02,0.04,34.90,tire_agent,NO
+Monaco GP 2023,Monaco,2023,1.32,0.00,0.01,0.02,0.00,1.35,0.02,0.03,38.56,tire_agent,NO
+Bahrain GP 2023,Bahrain,2023,1.22,0.00,0.01,0.02,0.00,1.24,0.02,0.04,32.08,tire_agent,NO
+Hungarian GP 2023,Budapest,2023,1.22,0.00,0.01,0.02,0.00,1.25,0.02,0.04,29.64,tire_agent,NO
+São Paulo GP 2022,São Paulo,2022,1.28,0.00,0.01,0.02,0.00,1.31,0.02,0.04,33.41,tire_agent,NO

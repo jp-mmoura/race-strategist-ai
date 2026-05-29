@@ -8,6 +8,7 @@ race results, weather, and event schedules.
 
 import os
 import logging
+import threading
 from pathlib import Path
 
 import fastf1
@@ -39,7 +40,11 @@ logger.info("FastF1 cache enabled at %s", CACHE_DIR)
 
 # In-memory session cache to avoid redundant loads when multiple agents
 # request the same session in a single pipeline run.
+# A threading lock prevents the "thundering herd" problem when LangGraph
+# runs tire/weather/rag nodes in parallel — without it, all three would
+# load the same session simultaneously before any can cache the result.
 _session_cache: dict[tuple, "fastf1.core.Session"] = {}
+_session_lock = threading.Lock()
 
 
 def get_session(
@@ -52,6 +57,9 @@ def get_session(
     Results are cached in-memory so that repeated calls with the same
     ``(year, grand_prix, session_type)`` return instantly without
     re-loading data from disk/network.
+
+    Thread-safe: a lock ensures that only one thread loads a given
+    session; subsequent concurrent callers wait and get the cached result.
 
     Parameters
     ----------
@@ -74,17 +82,31 @@ def get_session(
     gp_key = grand_prix.lower().strip() if isinstance(grand_prix, str) else grand_prix
     cache_key = (year, gp_key, session_type)
 
+    # Fast path: check without lock (safe because dict reads are atomic
+    # and we never delete entries during a pipeline run).
     if cache_key in _session_cache:
         logger.info(
             "Session cache HIT: %s %s – %s", year, grand_prix, session_type,
         )
         return _session_cache[cache_key]
 
-    session = fastf1.get_session(year, grand_prix, session_type)
-    session.load()
-    _session_cache[cache_key] = session
-    logger.info("Loaded session: %s %s – %s (cached)", year, grand_prix, session_type)
-    return session
+    # Slow path: acquire lock so only one thread loads.
+    with _session_lock:
+        # Double-check after acquiring lock (another thread may have loaded).
+        if cache_key in _session_cache:
+            logger.info(
+                "Session cache HIT (after lock): %s %s – %s",
+                year, grand_prix, session_type,
+            )
+            return _session_cache[cache_key]
+
+        session = fastf1.get_session(year, grand_prix, session_type)
+        session.load()
+        _session_cache[cache_key] = session
+        logger.info(
+            "Loaded session: %s %s – %s (cached)", year, grand_prix, session_type,
+        )
+        return session
 
 
 def clear_session_cache() -> None:

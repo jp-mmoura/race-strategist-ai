@@ -1,0 +1,187 @@
+======================================================================
+  LATENCY BENCHMARK — F1 Race Strategist AI
+  Run at: 2026-05-29 16:08:41
+  Threshold: 15.0s per full pipeline
+======================================================================
+
+  Pipeline: tire_agent → weather_agent → rag_retriever
+            → strategy_offline → evaluator
+
+  NOTE: strategy_offline internally re-runs tire + weather + RAG
+  (build_strategy_context), so total time ≈ 2× the data phase.
+  The 'parallel' benchmark parallelizes the STANDALONE data phase.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  British GP 2022 (Silverstone 2022)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SEQUENTIAL breakdown:
+    🟢 tire_agent............   1.32s  (98.1%)  █████████████████████████████████████████████████
+    🟢 weather_agent.........   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 rag_retriever.........   0.01s  ( 0.5%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 strategy_offline......   0.02s  ( 1.4%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 evaluator.............   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    ────────────────────────────────────────────────────
+    Total sequential:       1.35s
+    Data phase (seq):       1.33s
+
+  PARALLEL breakdown:
+    🟢 tire_agent............   0.02s
+    🟢 weather_agent.........   0.00s
+    🟢 rag_retriever.........   0.01s
+    🟢 strategy_offline......   0.02s
+    🟢 evaluator.............   0.00s
+    ────────────────────────────────────────────────────
+    Total parallel:         0.04s
+    Data phase (par):       0.02s
+    Speedup:              34.90×
+
+  🔍 Bottleneck: tire_agent (1.32s)
+  ✅ Total (1.3s) within 15.0s threshold
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Monaco GP 2023 (Monaco 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SEQUENTIAL breakdown:
+    🟢 tire_agent............   1.32s  (98.1%)  █████████████████████████████████████████████████
+    🟢 weather_agent.........   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 rag_retriever.........   0.01s  ( 0.5%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 strategy_offline......   0.02s  ( 1.4%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 evaluator.............   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    ────────────────────────────────────────────────────
+    Total sequential:       1.35s
+    Data phase (seq):       1.33s
+
+  PARALLEL breakdown:
+    🟢 tire_agent............   0.02s
+    🟢 weather_agent.........   0.00s
+    🟢 rag_retriever.........   0.01s
+    🟢 strategy_offline......   0.02s
+    🟢 evaluator.............   0.00s
+    ────────────────────────────────────────────────────
+    Total parallel:         0.03s
+    Data phase (par):       0.02s
+    Speedup:              38.56×
+
+  🔍 Bottleneck: tire_agent (1.32s)
+  ✅ Total (1.3s) within 15.0s threshold
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Bahrain GP 2023 (Bahrain 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SEQUENTIAL breakdown:
+    🟢 tire_agent............   1.22s  (98.0%)  █████████████████████████████████████████████████
+    🟢 weather_agent.........   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 rag_retriever.........   0.01s  ( 0.5%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 strategy_offline......   0.02s  ( 1.4%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 evaluator.............   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    ────────────────────────────────────────────────────
+    Total sequential:       1.24s
+    Data phase (seq):       1.22s
+
+  PARALLEL breakdown:
+    🟢 tire_agent............   0.02s
+    🟢 weather_agent.........   0.00s
+    🟢 rag_retriever.........   0.01s
+    🟢 strategy_offline......   0.02s
+    🟢 evaluator.............   0.00s
+    ────────────────────────────────────────────────────
+    Total parallel:         0.04s
+    Data phase (par):       0.02s
+    Speedup:              32.08×
+
+  🔍 Bottleneck: tire_agent (1.22s)
+  ✅ Total (1.2s) within 15.0s threshold
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Hungarian GP 2023 (Budapest 2023)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SEQUENTIAL breakdown:
+    🟢 tire_agent............   1.22s  (97.8%)  ████████████████████████████████████████████████
+    🟢 weather_agent.........   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 rag_retriever.........   0.01s  ( 0.6%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 strategy_offline......   0.02s  ( 1.6%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 evaluator.............   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    ────────────────────────────────────────────────────
+    Total sequential:       1.25s
+    Data phase (seq):       1.23s
+
+  PARALLEL breakdown:
+    🟢 tire_agent............   0.02s
+    🟢 weather_agent.........   0.00s
+    🟢 rag_retriever.........   0.01s
+    🟢 strategy_offline......   0.02s
+    🟢 evaluator.............   0.00s
+    ────────────────────────────────────────────────────
+    Total parallel:         0.04s
+    Data phase (par):       0.02s
+    Speedup:              29.64×
+
+  🔍 Bottleneck: tire_agent (1.22s)
+  ✅ Total (1.2s) within 15.0s threshold
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  São Paulo GP 2022 (São Paulo 2022)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SEQUENTIAL breakdown:
+    🟢 tire_agent............   1.28s  (98.0%)  █████████████████████████████████████████████████
+    🟢 weather_agent.........   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 rag_retriever.........   0.01s  ( 0.5%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 strategy_offline......   0.02s  ( 1.4%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    🟢 evaluator.............   0.00s  ( 0.0%)  ░░░░░░░░░░░░░░░░░░░░░░░░░
+    ────────────────────────────────────────────────────
+    Total sequential:       1.31s
+    Data phase (seq):       1.29s
+
+  PARALLEL breakdown:
+    🟢 tire_agent............   0.02s
+    🟢 weather_agent.........   0.00s
+    🟢 rag_retriever.........   0.01s
+    🟢 strategy_offline......   0.02s
+    🟢 evaluator.............   0.00s
+    ────────────────────────────────────────────────────
+    Total parallel:         0.04s
+    Data phase (par):       0.02s
+    Speedup:              33.41×
+
+  🔍 Bottleneck: tire_agent (1.28s)
+  ✅ Total (1.3s) within 15.0s threshold
+
+
+======================================================================
+  AGGREGATE RESULTS
+======================================================================
+
+  Sequential latency:
+    Average:  1.30s
+    Range:    1.24s – 1.35s
+    Over 15.0s: 0/5
+
+  Parallel latency:
+    Average:  0.04s
+    Avg speedup: 33.72×
+    Time saved:  1.26s avg
+
+  ╔══════════════════════════════════════════════════════╗
+  ║  VERDICT: ✅ WITHIN THRESHOLD (1.3s avg)           ║
+  ║  Parallelization saves ~1.3s but is optional.   ║
+  ╚══════════════════════════════════════════════════════╝
+
+  ARCHITECTURE NOTE:
+  ─────────────────
+  The strategy_offline node internally calls build_strategy_context(),
+  which re-invokes tire_agent, weather_agent, and RAG sequentially.
+  This means data is fetched TWICE in the LangGraph flow:
+    1st: by the standalone tire/weather/rag nodes (parallel in graph)
+    2nd: by strategy_node → build_strategy_context() (sequential)
+
+  FIX: Modify strategy_node to read pre-computed results from state
+  instead of re-running build_strategy_context(). This would halve
+  the data-fetching time. FastF1 caching mitigates this for cached
+  sessions, but the first run for a new session would benefit greatly.
+
+======================================================================

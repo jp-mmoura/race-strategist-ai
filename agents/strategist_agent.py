@@ -57,6 +57,8 @@ logger = logging.getLogger(__name__)
 _LLM_PROVIDER = os.getenv("STRATEGY_LLM_PROVIDER", "google")  # "google" or "openai"
 _LLM_MODEL = os.getenv("STRATEGY_LLM_MODEL", "gemini-2.0-flash")
 _LLM_TEMPERATURE = float(os.getenv("STRATEGY_LLM_TEMPERATURE", "0.3"))
+_LLM_TIMEOUT = int(os.getenv("STRATEGY_LLM_TIMEOUT", "10"))  # seconds
+_LLM_MAX_RETRIES = int(os.getenv("STRATEGY_LLM_MAX_RETRIES", "0"))
 
 
 def _get_llm():
@@ -66,12 +68,16 @@ def _get_llm():
         return ChatGoogleGenerativeAI(
             model=_LLM_MODEL,
             temperature=_LLM_TEMPERATURE,
+            timeout=_LLM_TIMEOUT,
+            max_retries=_LLM_MAX_RETRIES,
         )
     else:
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             model=_LLM_MODEL,
             temperature=_LLM_TEMPERATURE,
+            request_timeout=_LLM_TIMEOUT,
+            max_retries=_LLM_MAX_RETRIES,
         )
 
 
@@ -338,6 +344,8 @@ def generate_strategy(
     race_date: str | date | None = None,
     driver: str | None = None,
     session_type: str = "R",
+    *,
+    precomputed_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Generate a full race-strategy recommendation using an LLM.
 
@@ -345,6 +353,11 @@ def generate_strategy(
     ----------
     circuit, year, race_date, driver, session_type
         Passed through to ``build_strategy_context``.
+    precomputed_context : dict | None
+        If provided, skip ``build_strategy_context`` and use this dict
+        directly. Expected keys: tire_analysis, weather_analysis,
+        rag_context, context_text. Useful when the graph has already
+        populated these from upstream nodes.
 
     Returns
     -------
@@ -365,10 +378,16 @@ def generate_strategy(
         "error": None,
     }
 
-    # ── 1. Build context ──────────────────────────────────────────
-    ctx = build_strategy_context(
-        circuit, year, race_date, driver, session_type,
-    )
+    # ── 1. Build context (or reuse pre-computed) ──────────────────
+    if precomputed_context is not None:
+        ctx = precomputed_context
+        # Ensure context_text is assembled if not present
+        if not ctx.get("context_text"):
+            ctx["context_text"] = _assemble_context_text(ctx)
+    else:
+        ctx = build_strategy_context(
+            circuit, year, race_date, driver, session_type,
+        )
     result["context_summary"] = ctx["context_text"]
 
     # Resolve driver from tire analysis if not provided
@@ -431,9 +450,10 @@ def generate_strategy(
             "LLM generation failed (%s), falling back to offline strategy: %s",
             type(exc).__name__, exc,
         )
-        # Fallback to rule-based
+        # Fallback to rule-based (reuse already-built context)
         offline = generate_strategy_offline(
             circuit, year, race_date, driver, session_type,
+            precomputed_context=ctx,
         )
         result["recommendation_text"] = offline["recommendation_text"]
         result["confidence"] = "low"
@@ -614,19 +634,33 @@ def generate_strategy_offline(
     race_date: str | date | None = None,
     driver: str | None = None,
     session_type: str = "R",
+    *,
+    precomputed_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Generate a strategy recommendation without an LLM.
 
     Uses deterministic rules based on the tire and weather data.
     Useful as a fallback when no API key is configured.
 
+    Parameters
+    ----------
+    precomputed_context : dict | None
+        If provided, skip ``build_strategy_context`` and use this dict
+        directly. Avoids redundant data fetching when called from the
+        LangGraph workflow.
+
     Returns
     -------
     dict with the same keys as ``generate_strategy``.
     """
-    ctx = build_strategy_context(
-        circuit, year, race_date, driver, session_type,
-    )
+    if precomputed_context is not None:
+        ctx = precomputed_context
+        if not ctx.get("context_text"):
+            ctx["context_text"] = _assemble_context_text(ctx)
+    else:
+        ctx = build_strategy_context(
+            circuit, year, race_date, driver, session_type,
+        )
 
     tire = ctx.get("tire_analysis") or {}
     weather = ctx.get("weather_analysis") or {}

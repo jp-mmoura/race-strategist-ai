@@ -234,7 +234,8 @@ def strategy_node(state: dict[str, Any]) -> dict[str, Any]:
     """Generate a strategy recommendation.
 
     Reads tire_analysis, weather_analysis, and rag_context from state
-    (already populated by upstream nodes) and calls the strategy agent.
+    (already populated by upstream nodes) and calls the strategy agent
+    with pre-computed data to avoid redundant data fetching.
 
     On the first pass the agent generates from scratch; on revision
     passes it receives ``revision_feedback`` from the evaluator.
@@ -251,11 +252,22 @@ def strategy_node(state: dict[str, Any]) -> dict[str, Any]:
             "error": "Strategy node: no circuit in state.",
         }
 
+    # Build pre-computed context from upstream node outputs already in state.
+    # This avoids the expensive re-fetch in build_strategy_context().
+    precomputed = {
+        "tire_analysis": state.get("tire_analysis"),
+        "weather_analysis": state.get("weather_analysis"),
+        "rag_context": state.get("rag_context"),
+        "context_text": "",  # will be assembled by the strategy function
+        "error": None,
+    }
+
     try:
         result = generate_strategy(
             circuit=circuit,
             year=year,
             session_type=session_type,
+            precomputed_context=precomputed,
         )
         return {
             "strategy_recommendation": result,
@@ -330,6 +342,7 @@ def revision_node(state: dict[str, Any]) -> dict[str, Any]:
 
     Increments ``revision_count`` and injects the evaluator's findings
     into the messages so the strategy agent can correct its output.
+    Uses pre-computed data from state to avoid redundant fetching.
     """
     from agents.strategist_agent import generate_strategy, generate_strategy_offline
 
@@ -359,11 +372,21 @@ def revision_node(state: dict[str, Any]) -> dict[str, Any]:
     else:
         extra_messages = state.get("messages", [])
 
+    # Re-use upstream data from state
+    precomputed = {
+        "tire_analysis": state.get("tire_analysis"),
+        "weather_analysis": state.get("weather_analysis"),
+        "rag_context": state.get("rag_context"),
+        "context_text": "",
+        "error": None,
+    }
+
     try:
         result = generate_strategy(
             circuit=circuit,
             year=year,
             session_type=session_type,
+            precomputed_context=precomputed,
         )
         return {
             "strategy_recommendation": result,
@@ -379,6 +402,7 @@ def revision_node(state: dict[str, Any]) -> dict[str, Any]:
                 circuit=circuit,
                 year=year,
                 session_type=session_type,
+                precomputed_context=precomputed,
             )
             return {
                 "strategy_recommendation": result,
