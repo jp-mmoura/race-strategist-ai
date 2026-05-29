@@ -83,6 +83,8 @@ def _get_llm():
 
 # ===================================================================
 # System prompt for the strategy LLM
+# Prompt Version: 1.1.0
+# Tracked in prompts/strategist_system_prompt.md
 # ===================================================================
 
 _SYSTEM_PROMPT = textwrap.dedent("""\

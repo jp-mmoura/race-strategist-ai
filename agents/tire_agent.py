@@ -353,7 +353,7 @@ def estimate_pit_window(
         }
 
     # Number of pit stops = (number of stints - 1)
-    num_stops = len(deg_data) - 1
+    num_stops = max(0, len(stints_df) - 1)
     if num_stops == 1:
         strategy_type = "1-stop"
     elif num_stops == 2:
@@ -363,21 +363,27 @@ def estimate_pit_window(
     else:
         strategy_type = "0-stop"
 
-    # For each stint, estimate when cumulative degradation exceeds pit loss
+    # For each stint except the last one, estimate when cumulative degradation exceeds pit loss.
+    # The final stint doesn't require a pit window since the race ends.
     pit_laps: list[int] = []
-    pit_windows: list[dict[str, int]] = []
+    pit_windows: list[dict[str, Any]] = []
 
-    for stint in deg_data:
-        deg_rate = stint["deg_rate_sec_per_lap"]
-        if deg_rate <= 0.01:
-            # Negligible degradation — stint is tyre-limited by strategy, not wear
+    for idx, stint in enumerate(deg_data):
+        if idx == len(deg_data) - 1:
             continue
 
-        # Laps until cumulative deg = pit_loss_sec
-        # Cumulative deg = deg_rate * n * (n+1) / 2  (quadratic approx)
-        # Simplified: crossover_lap ≈ pit_loss / deg_rate
-        crossover = pit_loss_sec / deg_rate
-        optimal_lap = stint["start_lap"] + int(crossover)
+        deg_rate = stint["deg_rate_sec_per_lap"]
+        if deg_rate > 0.01:
+            # Laps until cumulative deg = pit_loss_sec
+            # Cumulative deg = deg_rate * n * (n+1) / 2  (quadratic approx)
+            # Simplified: crossover_lap ≈ pit_loss / deg_rate
+            crossover = pit_loss_sec / deg_rate
+            optimal_lap = stint["start_lap"] + int(crossover)
+        else:
+            # Fallback for low degradation (e.g. Monaco, Hard compounds, or wet weather stints)
+            # Use the actual end lap of the stint as the optimal lap.
+            optimal_lap = stint["end_lap"]
+
         # Clamp to stint boundaries
         optimal_lap = max(stint["start_lap"] + 5, min(optimal_lap, stint["end_lap"]))
 
@@ -387,7 +393,7 @@ def estimate_pit_window(
             "optimal": optimal_lap,
             "latest": min(optimal_lap + 5, stint["end_lap"]),
             "compound": stint["compound"],
-            "deg_rate": stint["deg_rate_sec_per_lap"],
+            "deg_rate": deg_rate,
         })
 
     # Build rationale

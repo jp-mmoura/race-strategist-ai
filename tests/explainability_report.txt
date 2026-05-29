@@ -1,6 +1,6 @@
 ======================================================================
   EXPLAINABILITY SCORE EVALUATION — F1 Race Strategist AI
-  Run at: 2026-05-28 15:03:28
+  Run at: 2026-05-29 16:26:35
 ======================================================================
 
   PURPOSE: Verify that strategy justifications are clear enough
@@ -91,7 +91,7 @@
        Jargon density: 0.0%
        ✅ Low jargon — accessible to non-technical audience
        ✅ Uses conversational/inclusive language
-       Word count: 53
+       Word count: 69
        ✅ Sufficient detail
 
   [historical_cross_verification] (15/15)
@@ -177,7 +177,7 @@
        Jargon density: 0.0%
        ✅ Low jargon — accessible to non-technical audience
        ✅ Uses conversational/inclusive language
-       Word count: 55
+       Word count: 58
        ✅ Sufficient detail
 
   [historical_cross_verification] (15/15)
